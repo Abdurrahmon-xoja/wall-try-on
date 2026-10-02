@@ -1,0 +1,1265 @@
+<title>Wall Try-On</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: the photo is the hero on a neutral grey "viewing booth" stage so paint colours read true; controls sit in a right rail on desktop and in a sheet under the photo on phones. */
+:root{
+  --ground:#e9e9e6;
+  --surface:#f7f7f5;
+  --stage:#c9cac6;
+  --ink:#1c1d1b;
+  --muted:#5f615c;
+  --line:#d6d7d2;
+  --chip:#e2e2de;
+  --accent:#2747d0;
+  --accent-ink:#ffffff;
+  --glass:rgba(247,247,245,.92);
+  --shadow:0 1px 2px rgba(20,20,18,.08),0 6px 18px rgba(20,20,18,.08);
+  --ok:#2f7d4f;
+  --warn:#a8641a;
+  --font-display:"Bricolage Grotesque","Avenir Next","Segoe UI",system-ui,sans-serif;
+  --font-body:"Instrument Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){--ground:#121312;--surface:#1b1c1b;--stage:#2b2c2a;--ink:#ecece8;--muted:#a3a59f;--line:#323431;--chip:#262725;--accent:#91a4ff;--accent-ink:#0d1330;--glass:rgba(27,28,27,.9);--shadow:0 1px 2px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.35);--ok:#6fcf97;--warn:#f0b35a;color-scheme:dark}
+}
+:root[data-theme="dark"]{--ground:#121312;--surface:#1b1c1b;--stage:#2b2c2a;--ink:#ecece8;--muted:#a3a59f;--line:#323431;--chip:#262725;--accent:#91a4ff;--accent-ink:#0d1330;--glass:rgba(27,28,27,.9);--shadow:0 1px 2px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.35);--ok:#6fcf97;--warn:#f0b35a;color-scheme:dark}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font:15px/1.45 var(--font-body);-webkit-font-smoothing:antialiased;overflow:hidden}
+button,input,label{font:inherit}
+
+.app{height:100%;display:grid;grid-template-columns:minmax(0,1fr) 372px;grid-template-rows:auto minmax(0,1fr);gap:12px;padding-inline:16px;padding-block:12px}
+.bar{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--font-display);font-weight:700;font-size:22px;letter-spacing:-.015em}
+.brand svg{flex:none}
+.steps{display:flex;gap:6px;list-style:none;margin:0;padding:0}
+.steps li{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:500;padding:5px 11px 5px 6px;border-radius:999px;background:var(--chip);color:var(--muted)}
+.steps li b{display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--surface);font:500 11px var(--font-mono);color:var(--ink)}
+.steps li[aria-current="step"]{background:var(--ink);color:var(--ground)}
+.steps li[aria-current="step"] b{background:var(--ground);color:var(--ink)}
+
+.stage{position:relative;min-height:0;background:var(--stage);border-radius:16px;display:grid;place-items:center;overflow:hidden}
+.frame{position:relative;width:10px;height:10px}
+.frame canvas{position:absolute;inset:0;width:100%;height:100%;display:block;border-radius:4px}
+#ov{touch-action:none;cursor:crosshair}
+.pill{background:var(--glass);color:var(--ink);box-shadow:var(--shadow);border-radius:999px;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.hint{position:absolute;left:12px;bottom:12px;max-width:calc(100% - 196px);padding:9px 14px;font-size:13.5px;font-weight:500;line-height:1.3}
+.tools{position:absolute;right:12px;bottom:12px;display:flex;gap:8px}
+.tbtn{appearance:none;border:0;min-width:44px;height:44px;padding:0 14px;display:inline-flex;align-items:center;justify-content:center;gap:7px;cursor:pointer;font-weight:600;font-size:13.5px;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.tbtn.icon{padding:0;width:44px}
+.tbtn[disabled]{opacity:.4;cursor:default}
+.tbtn.on{background:var(--ink);color:var(--ground)}
+.toast{position:absolute;top:12px;left:50%;transform:translateX(-50%);max-width:min(440px,calc(100% - 24px));padding:10px 16px;font-size:13.5px;font-weight:500;text-align:center;border-radius:12px;transition:opacity .2s}
+.toast.off{opacity:0}
+/* messages and badges sit on top of the photo; taps must go through them to the wall */
+.toast,.hint,.busy,.livebadge{pointer-events:none}
+.busy{position:absolute;inset:auto;padding:9px 16px;font-size:13.5px;font-weight:600}
+.livevid{position:absolute;left:0;top:0;width:2px;height:2px;opacity:0;pointer-events:none}
+.livebadge{position:absolute;top:12px;left:12px;display:flex;align-items:center;gap:7px;padding:6px 11px;font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+.livebadge i{width:8px;height:8px;border-radius:50%;background:#e5484d;animation:pulse 1.1s ease-in-out infinite}
+
+.panel{min-height:0;overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:22px;overscroll-behavior:contain}
+.sec h2{margin:0 0 10px;display:flex;align-items:baseline;gap:8px;font:600 16.5px/1.2 var(--font-display);letter-spacing:-.01em;text-wrap:balance}
+.sec h2 .n{font:500 11.5px var(--font-mono);color:var(--muted)}
+.sec h2 .for{font:500 13px var(--font-body);color:var(--muted);margin-left:auto}
+.note{margin:0 0 10px;font-size:13px;color:var(--muted)}
+.row{display:flex;flex-wrap:wrap;gap:8px}
+.btn{appearance:none;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:10px 14px;border:1px solid var(--line);border-radius:11px;background:var(--surface);color:var(--ink);font-weight:500;font-size:14px;line-height:1.1;cursor:pointer}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.small{min-height:38px;padding:8px 12px;font-size:13.5px}
+.btn.quiet{border-color:transparent;background:var(--chip)}
+.btn[disabled]{opacity:.45;cursor:default}
+.grow{flex:1 1 0;min-width:0}
+:is(.btn,.tbtn,.sw,.dot,.wallchip,.tabs button,.seg button):focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.walls{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.wallchip{appearance:none;display:flex;align-items:center;gap:8px;min-height:40px;padding:5px 13px 5px 5px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--ink);font-weight:600;font-size:13.5px;cursor:pointer}
+.wallchip i{width:28px;height:28px;border-radius:50%;background:var(--c);background-size:cover;background-position:center;box-shadow:inset 0 0 0 1px rgba(0,0,0,.14)}
+.wallchip[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.empty{font-size:13px;color:var(--muted);padding:10px 12px;border:1px dashed var(--line);border-radius:11px;margin-bottom:10px}
+
+.tabs,.seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;margin-bottom:12px;background:var(--chip);border-radius:11px}
+.seg{grid-template-columns:repeat(4,minmax(0,1fr))}
+.tabs button,.seg button{appearance:none;border:0;background:transparent;color:var(--muted);padding:9px 4px;border-radius:8px;font-weight:600;font-size:13.5px;cursor:pointer}
+.tabs button[aria-selected="true"],.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.1)}
+
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.grid.tex{grid-template-columns:repeat(3,minmax(0,1fr))}
+.sw{appearance:none;display:flex;flex-direction:column;padding:0;overflow:hidden;text-align:left;border:1px solid var(--line);border-radius:11px;background:var(--surface);color:var(--ink);cursor:pointer;min-width:0}
+.sw .c{display:block;height:46px;background:var(--c);background-size:cover;background-position:center}
+.grid.tex .sw .c{height:74px;background-color:var(--chip)}
+.sw .t{display:block;padding:6px 8px 7px;font-size:12.5px;font-weight:500;line-height:1.2;overflow-wrap:anywhere}
+.sw .t small{display:block;margin-top:2px;font:400 10.5px var(--font-mono);color:var(--muted)}
+.sw[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
+.sw.add .c{display:grid;place-items:center;font:600 28px var(--font-display);color:var(--muted);background:repeating-linear-gradient(45deg,var(--chip) 0 8px,var(--surface) 8px 16px)}
+.custom{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:13.5px}
+.custom input[type=color]{width:44px;height:36px;padding:0;border:1px solid var(--line);border-radius:8px;background:none;cursor:pointer}
+
+.sub{margin:14px 0 8px;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.strip{display:flex;gap:8px;overflow-x:auto;padding:3px 3px 6px}
+.dot{appearance:none;flex:none;width:34px;height:34px;border-radius:50%;border:2px solid var(--surface);background:var(--c);box-shadow:0 0 0 1px var(--line);cursor:pointer;padding:0}
+.dot[aria-pressed="true"]{box-shadow:0 0 0 2px var(--accent)}
+.field{display:grid;gap:4px;margin-top:10px;font-size:13px;color:var(--muted)}
+.field span{display:flex;justify-content:space-between}
+.field output{font-family:var(--font-mono);font-size:12px;color:var(--ink)}
+input[type=range]{width:100%;accent-color:var(--accent);height:28px}
+.check{display:flex;align-items:center;gap:9px;margin-top:12px;font-size:13.5px;cursor:pointer}
+.check input{width:18px;height:18px;accent-color:var(--accent)}
+.editbox{margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--ground)}
+.editbox .note{margin-top:2px}
+.ai{display:flex;align-items:center;gap:9px;margin-bottom:10px;padding:9px 12px;border-radius:11px;background:var(--chip);font-size:13px;font-weight:500}
+.ai i{flex:none;width:9px;height:9px;border-radius:50%;background:var(--muted)}
+.ai[data-state="loading"] i,.ai[data-state="running"] i{animation:pulse 1.1s ease-in-out infinite}
+.ai[data-state="done"] i,.ai[data-state="ready"] i{background:var(--ok)}
+.ai[data-state="failed"] i{background:var(--warn)}
+@keyframes pulse{50%{opacity:.25}}
+textarea{width:100%;min-height:64px;padding:10px 12px;border:1px solid var(--line);border-radius:11px;background:var(--surface);color:var(--ink);font:14px/1.4 var(--font-body);resize:vertical}
+.testrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px;font-size:13px;color:var(--muted)}
+details{font-size:13.5px;color:var(--muted)}
+details summary{cursor:pointer;font-weight:600;color:var(--ink)}
+details ul{margin:8px 0 0;padding-left:18px;display:grid;gap:4px}
+
+@media (max-width: 860px){
+  .app{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1.05fr) minmax(0,1fr);gap:10px;padding-block:10px}
+  .brand{font-size:19px}
+  .stage{align-items:start;padding-top:8px}
+  .panel{padding:14px;gap:18px}
+  .hint{max-width:calc(100% - 214px);font-size:12.5px;padding:8px 12px}
+  .tbtn{height:40px;min-width:40px;padding:0 11px}
+  .tbtn.icon{width:40px}
+}
+@media (max-width: 860px){ .app.live .hint{display:none} }
+@media (max-width: 520px){ .steps{display:none} .app.live #beforeBtn .lbl{display:none} .app.live #beforeBtn{width:40px;padding:0} }
+@media (prefers-reduced-motion: reduce){ .toast{transition:none} .ai i{animation:none!important} }
+</style>
+
+<div class="app">
+  <header class="bar">
+    <div class="brand">
+      <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><g transform="rotate(-18 6 26)"><rect x="3" y="4" width="9" height="22" rx="2" fill="#c0704f"/></g><g transform="rotate(-4 6 26)"><rect x="8" y="3" width="9" height="23" rx="2" fill="#a8b5a0"/></g><g transform="rotate(10 6 26)"><rect x="13" y="3" width="9" height="23" rx="2" fill="#2f5d62"/></g></svg>
+      Wall Try-On
+    </div>
+    <ol class="steps" id="steps">
+      <li data-step="1"><b>1</b>Photo</li>
+      <li data-step="2"><b>2</b>Tap a wall</li>
+      <li data-step="3"><b>3</b>Colour or texture</li>
+    </ol>
+  </header>
+
+  <main class="stage" id="stage">
+    <div class="frame" id="frame">
+      <canvas id="gl"></canvas>
+      <canvas id="ov" aria-label="Your room photo. Tap a wall to paint it."></canvas>
+    </div>
+    <div class="livebadge pill" id="liveBadge" hidden><i></i>Live</div>
+    <div class="hint pill" id="hint" aria-live="polite">Tap a wall to paint it</div>
+    <div class="tools">
+      <button class="tbtn icon pill" id="undoBtn" type="button" aria-label="Undo" title="Undo" disabled>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>
+      </button>
+      <button class="tbtn pill" id="beforeBtn" type="button" title="Press and hold to see the original photo">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16"/></svg>
+        <span class="lbl">Before</span>
+      </button>
+      <button class="tbtn pill" id="freezeBtn" type="button" title="Keep this frame as a photo" hidden>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5" fill="currentColor"/></svg>
+        Freeze
+      </button>
+      <button class="tbtn icon pill" id="stopBtn" type="button" aria-label="Stop camera" title="Stop camera" hidden>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+      <button class="tbtn icon pill" id="saveBtn" type="button" aria-label="Save picture" title="Save picture" hidden>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+      </button>
+    </div>
+    <div class="toast pill off" id="toast" role="status"></div>
+    <div class="busy pill" id="busy" hidden>Finding the wall…</div>
+  </main>
+
+  <aside class="panel" id="panel">
+    <section class="sec">
+      <h2><span class="n">1</span>Your photo</h2>
+      <button class="btn primary" id="liveBtn" type="button" style="width:100%;margin-bottom:8px">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="13" height="12" rx="2"/><path d="m15.5 10.5 6-3.5v10l-6-3.5z"/></svg>
+        Live camera
+      </button>
+      <div class="row">
+        <label class="btn grow" for="camIn" id="camLbl">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+          Take photo
+        </label>
+        <label class="btn grow" for="fileIn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m3 16 5-5 4 4 3-3 6 6"/></svg>
+          Choose photo
+        </label>
+        <button class="btn quiet" id="sampleBtn" type="button">Sample room</button>
+      </div>
+      <input id="camIn" type="file" accept="image/*" capture="environment" hidden>
+      <input id="fileIn" type="file" accept="image/*" hidden>
+    </section>
+
+    <section class="sec">
+      <h2><span class="n">2</span>Walls</h2>
+      <p class="note" id="liveNote" hidden>Live mode paints one wall at a time in colour. Tap a wall in the camera view, then pick a colour below. For textures and fine edges, press <b>Freeze</b> to keep a still photo.</p>
+      <div class="ai" id="aiBox" data-state="loading" aria-live="polite"><i></i><span id="aiText">Loading the AI wall finder…</span></div>
+      <div class="walls" id="walls"></div>
+      <div class="empty" id="wallsEmpty" hidden>No walls yet. Tap a wall in the photo.</div>
+      <div class="row" id="wallActions">
+        <button class="btn small primary" id="autoBtn" type="button" hidden>Find walls for me</button>
+        <button class="btn small" id="editBtn" type="button">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>
+          Fix edges
+        </button>
+        <button class="btn small" id="allBtn" type="button">Same on all walls</button>
+        <button class="btn small quiet" id="delBtn" type="button">Remove wall</button>
+      </div>
+
+      <div class="editbox" id="editBox" hidden>
+        <div class="seg" role="group" aria-label="Edit tool">
+          <button type="button" data-mode="add" aria-pressed="false">Add area</button>
+          <button type="button" data-mode="brush" aria-pressed="false">Brush</button>
+          <button type="button" data-mode="erase" aria-pressed="false">Eraser</button>
+          <button type="button" data-mode="corners" aria-pressed="false">Corners</button>
+        </div>
+        <p class="note" id="editNote"></p>
+        <label class="field" id="tolField"><span>Sensitivity <output id="tolOut"></output></span><input type="range" id="tolR" min="4" max="36" step="1" value="14"></label>
+        <label class="field" id="brushField"><span>Brush size <output id="brushOut"></output></span><input type="range" id="brushR" min="6" max="70" step="1" value="26"></label>
+        <div class="row" style="margin-top:12px">
+          <button class="btn small quiet" id="resetCorners" type="button">Reset corners</button>
+          <button class="btn small primary" id="doneBtn" type="button">Done</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="sec">
+      <h2><span class="n">3</span>Finish <span class="for" id="finishFor"></span></h2>
+      <div class="tabs" role="tablist">
+        <button type="button" role="tab" id="tabColour" aria-selected="true" aria-controls="colourPane">Colour</button>
+        <button type="button" role="tab" id="tabTexture" aria-selected="false" aria-controls="texturePane">Texture</button>
+      </div>
+      <div id="colourPane" role="tabpanel" aria-labelledby="tabColour">
+        <div class="grid" id="swatches"></div>
+        <label class="custom"><input type="color" id="customColor" value="#7d8461"> Any other colour</label>
+      </div>
+      <div id="texturePane" role="tabpanel" aria-labelledby="tabTexture" hidden>
+        <div class="grid tex" id="textures"></div>
+        <input id="texIn" type="file" accept="image/*" hidden>
+        <div class="sub">Texture colour</div>
+        <div class="strip" id="strip"></div>
+        <label class="check" id="tintRow"><input type="checkbox" id="tintChk"> Use the colour on this texture</label>
+        <label class="field"><span>Pattern size <output id="sizeOut"></output></span><input type="range" id="sizeR" min="40" max="250" step="5" value="100"></label>
+        <label class="field"><span>Depth <output id="depthOut"></output></span><input type="range" id="depthR" min="0" max="200" step="5" value="100"></label>
+      </div>
+    </section>
+
+    <details class="sec">
+      <summary>Tips for a good photo</summary>
+      <ul>
+        <li>Shoot in daylight with the lights on.</li>
+        <li>Hold the phone level and get the whole wall in the frame.</li>
+        <li>For textures, use <b>Fix edges → Corners</b> to line the dots up with the wall's corners.</li>
+        <li>Colours on screen are a preview. Check a real tester pot before you buy.</li>
+      </ul>
+    </details>
+
+    <section class="sec" id="testSec" hidden>
+      <h2>Test report</h2>
+      <p class="note" id="testInfo">Sends Claude this device's browser details, how fast the AI ran and any errors. Your photos are not sent.</p>
+      <label for="testNote" class="note" style="display:block;margin-bottom:6px">What did you notice? (optional)</label>
+      <textarea id="testNote" placeholder="For example: paint spilled onto the ceiling"></textarea>
+      <div class="testrow"><button class="btn small" id="testBtn" type="button">Send test report</button><span id="testMsg" role="status"></span></div>
+    </section>
+  </aside>
+</div>
+
+<script>
+(function(){
+'use strict';
+const $=s=>document.querySelector(s);
+const IN_ARTIFACT=!!(window.claude&&window.claude.use);
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+const smooth=(a,b,x)=>{const t=clamp((x-a)/(b-a),0,1);return t*t*(3-2*t);};
+const LIN=new Float32Array(256);for(let i=0;i<256;i++)LIN[i]=Math.pow(i/255,2.2);
+const hexRgb=h=>{h=h.replace('#','');return[parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];};
+const hexLin=h=>hexRgb(h).map(v=>LIN[v]);
+const lrv=h=>{const c=hexLin(h);return Math.round((.2126*c[0]+.7152*c[1]+.0722*c[2])*100);};
+function rng(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function hash2(x,y,s){let h=(Math.imul(x,374761393)+Math.imul(y,668265263)+Math.imul(s,1442695041))|0;h=Math.imul(h^(h>>>13),1274126177);h^=h>>>16;return(h>>>0)/4294967296;}
+function vnoise(x,y,px,py,s){
+  const xi=Math.floor(x),yi=Math.floor(y),xf=x-xi,yf=y-yi;
+  const x0=((xi%px)+px)%px,x1=(x0+1)%px,y0=((yi%py)+py)%py,y1=(y0+1)%py;
+  const u=xf*xf*xf*(xf*(xf*6-15)+10),v=yf*yf*yf*(yf*(yf*6-15)+10);
+  const a=hash2(x0,y0,s),b=hash2(x1,y0,s),c=hash2(x0,y1,s),d=hash2(x1,y1,s);
+  return a+(b-a)*u+(c-a)*v+(a-b-c+d)*u*v;
+}
+function fbm(u,v,px,py,oct,s){let sum=0,amp=.5,nrm=0;for(let o=0;o<oct;o++){sum+=amp*vnoise(u*px,v*py,px,py,s+o*17);nrm+=amp;amp*=.5;px*=2;py*=2;}return sum/nrm;}
+
+/* ---------- Paint colours ---------- */
+const COLOURS=[['Chalk White','#EEEBE3'],['Warm Linen','#E3D5C0'],['Butter','#F1DFA0'],['Ochre','#D2A24C'],
+['Dusty Rose','#D4A5A0'],['Terracotta','#C0704F'],['Clay','#B98B6E'],['Sage','#A8B5A0'],
+['Olive Grove','#7D8461'],['Forest','#3E5641'],['Sky Mist','#B9CDD6'],['Denim','#5B7A99'],
+['Deep Teal','#2F5D62'],['Navy Ink','#2B3A4F'],['Lavender','#B6A9C9'],['Charcoal','#45474A']];
+const colourName=h=>{const c=COLOURS.find(c=>c[1].toLowerCase()===String(h).toLowerCase());return c?c[0]:String(h).toUpperCase();};
+
+/* ---------- Procedural textures (512px, seamless) ----------
+   albedo RGBA: alpha 255 = this pixel takes the paint colour, 0 = keeps its own colour */
+const TS=512;
+function genPlaster(A,H,N){for(let y=0;y<N;y++)for(let x=0;x<N;x++){const u=x/N,v=y/N,i=y*N+x;
+  const c=fbm(u,v,3,3,5,11),s=fbm(u,v,4,10,4,23),f=fbm(u,v,12,12,3,5);
+  const g=(.9+.15*(c-.5)+.06*(s-.5))*255;A[i*4]=A[i*4+1]=A[i*4+2]=g;A[i*4+3]=255;H[i]=.55*s+.25*c+.2*f;}}
+function genStucco(A,H,N){for(let y=0;y<N;y++)for(let x=0;x<N;x++){const u=x/N,v=y/N,i=y*N+x;
+  const a=fbm(u,v,12,12,3,31),b=vnoise(u*128,v*128,128,128,37),c=vnoise(u*48,v*48,48,48,39);
+  const g=(.9+.1*(a-.5)+.08*(b-.5))*255;A[i*4]=A[i*4+1]=A[i*4+2]=g;A[i*4+3]=255;H[i]=.35*a+.4*b*b+.25*c;}}
+function genMicro(A,H,N){for(let y=0;y<N;y++)for(let x=0;x<N;x++){const u=x/N,v=y/N,i=y*N+x;
+  const c=fbm(u,v,2,2,6,41),m=fbm(u,v,7,7,3,43);
+  const g=(.8+.4*(c-.5)+.08*(m-.5))*255;A[i*4]=A[i*4+1]=A[i*4+2]=g;A[i*4+3]=255;H[i]=.15*m+.1*c;}
+  const R=rng(7);for(let k=0;k<1100;k++){const cx=(R()*N)|0,cy=(R()*N)|0,r=.8+R()*1.7;
+    for(let dy=-3;dy<=3;dy++)for(let dx=-3;dx<=3;dx++){const d=Math.hypot(dx,dy);if(d>=r)continue;const t=1-d/r;const i=((cy+dy+N)%N)*N+((cx+dx+N)%N);
+      H[i]-=.06*t;const m=1-.28*t;A[i*4]*=m;A[i*4+1]*=m;A[i*4+2]*=m;}}}
+function genLinen(A,H,N){const P=8;for(let y=0;y<N;y++)for(let x=0;x<N;x++){const u=x/N,v=y/N,i=y*N+x;
+  const cx=(x/P)|0,cy=(y/P)|0,wf=.75+.5*hash2(cx,0,51),ef=.75+.5*hash2(0,cy,53);
+  const wa=Math.sin(Math.PI*((x%P)+.5)/P)*wf,we=Math.sin(Math.PI*((y%P)+.5)/P)*ef;
+  const h=((cx+cy)&1)?Math.max(we,wa*.6):Math.max(wa,we*.6);
+  const g=(.82+.14*(h-.5)+.06*(fbm(u,v,8,8,3,55)-.5)+.04*(hash2(cx,cy,57)-.5))*255;
+  A[i*4]=A[i*4+1]=A[i*4+2]=g;A[i*4+3]=255;H[i]=h;}}
+function genDeco(A,H,N){const P=128;for(let y=0;y<N;y++)for(let x=0;x<N;x++){const u=x/N,v=y/N,i=y*N+x;
+  const m1=(x+y)%P,m2=((x-y)%P+P)%P,dl=Math.min(Math.min(m1,P-m1),Math.min(m2,P-m2))/Math.SQRT2;
+  const gx=Math.round(x/64),gy=Math.round(y/64);let dd=1e9;if(((gx+gy)&1)===0)dd=Math.hypot(x-gx*64,y-gy*64);
+  const gold=Math.max(1-smooth(1.1,2.3,dl),1-smooth(4,5.6,dd));
+  const pn=fbm(u,v,24,24,3,101),paper=(.95+.05*(pn-.5))*255,gn=.85+.3*fbm(u,v,32,32,2,103);
+  A[i*4]=paper*(1-gold)+194*gn*gold;A[i*4+1]=paper*(1-gold)+158*gn*gold;A[i*4+2]=paper*(1-gold)+86*gn*gold;A[i*4+3]=(1-gold)*255;
+  H[i]=.3+.5*gold+.03*pn;}}
+function genBrick(A,H,N){const RH=64,BW=128,M=3.5;const PAL=[[148,68,48],[162,80,56],[134,60,44],[172,94,68],[120,56,42],[156,74,50],[140,84,62]];
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){const u=x/N,v=y/N,i=y*N+x;
+  const r=(y/RH)|0,yi=y%RH,xs=(x+(r&1)*64)%N,b=(xs/BW)|0,xi=xs%BW,id=r*4+b;
+  const d=Math.min(xi,BW-xi,yi,RH-yi)-M;const n=fbm(u,v,16,16,4,61),sp=vnoise(u*96,v*96,96,96,63);
+  if(d<0){const t=.85+.3*n;A[i*4]=176*t;A[i*4+1]=170*t;A[i*4+2]=158*t;H[i]=.15+.1*n;}
+  else{const c=PAL[(hash2(id,1,65)*PAL.length)|0],t=(.88+.22*hash2(id,2,67))*(.78+.42*n)*(sp>.8?.84:1)*(.86+.14*smooth(0,6,d));
+    A[i*4]=c[0]*t;A[i*4+1]=c[1]*t;A[i*4+2]=c[2]*t;H[i]=.55+.4*smooth(0,4,d)+.12*(n-.5);}
+  A[i*4+3]=0;}}
+function genWood(A,H,N){const S=64;for(let y=0;y<N;y++)for(let x=0;x<N;x++){const u=x/N,v=y/N,i=y*N+x;
+  const xi=x%S,s=(x/S)|0,tone=.88+.22*hash2(s,3,71);
+  const g1=fbm(u,v,48,3,4,70+s*3),ring=Math.sin(((xi/S)*3+4*fbm(u,v,6,2,3,80+s))*Math.PI*5);
+  const gd=Math.min(xi,S-1-xi);
+  if(gd<2){A[i*4]=66;A[i*4+1]=47;A[i*4+2]=32;H[i]=.05;}
+  else{const l=(.8+.08*ring+.22*(g1-.5))*tone;A[i*4]=182*l;A[i*4+1]=136*l;A[i*4+2]=92*l;H[i]=.8+.2*smooth(1,5,gd)+.04*(g1-.5);}
+  A[i*4+3]=0;}}
+function genStone(A,H,N){const BW=256,BH=128,J=2.5;for(let y=0;y<N;y++)for(let x=0;x<N;x++){const u=x/N,v=y/N,i=y*N+x;
+  const r=(y/BH)|0,xs=(x+(r&1)*128)%N,bx=(xs/BW)|0,xi=xs%BW,yi=y%BH,id=r*2+bx;
+  const d=Math.min(xi,BW-xi,yi,BH-yi)-J,band=fbm(u,v,2,14,5,90),n=fbm(u,v,16,16,3,95),tone=.92+.12*hash2(id,1,97);
+  if(d<0){A[i*4]=184;A[i*4+1]=176;A[i*4+2]=162;H[i]=.2;}
+  else{const l=(.86+.4*(band-.5)+.06*(n-.5))*tone;A[i*4]=216*l;A[i*4+1]=202*l;A[i*4+2]=178*l;H[i]=.7+.25*smooth(0,3,d)+.05*(n-.5);}
+  A[i*4+3]=0;}
+  const R=rng(9);for(let k=0;k<520;k++){const cx=(R()*N)|0,cy=(R()*N)|0,rx=1.5+R()*4.5,ry=.8+R()*1.4;
+    for(let dy=-3;dy<=3;dy++)for(let dx=-7;dx<=7;dx++){const d=Math.hypot(dx/rx,dy/ry);if(d>=1)continue;const t=1-d;const i=((cy+dy+N)%N)*N+((cx+dx+N)%N);
+      H[i]-=.35*t;const m=1-.3*t;A[i*4]*=m;A[i*4+1]*=m;A[i*4+2]*=m;}}}
+
+const TEX=[
+  {id:'plaster',name:'Lime plaster',tint:true,tiles:2,target:.16,gen:genPlaster},
+  {id:'stucco',name:'Sand stucco',tint:true,tiles:5,target:.55,gen:genStucco},
+  {id:'micro',name:'Microcement',tint:true,tiles:2,target:.3,gen:genMicro},
+  {id:'linen',name:'Linen weave',tint:true,tiles:6,target:.5,gen:genLinen},
+  {id:'deco',name:'Deco wallpaper',tint:true,tiles:3,target:.4,gen:genDeco},
+  {id:'brick',name:'Brick',tint:false,tiles:4,target:.85,gen:genBrick},
+  {id:'wood',name:'Oak slats',tint:false,tiles:3,target:.55,gen:genWood},
+  {id:'stone',name:'Travertine',tint:false,tiles:2,target:.45,gen:genStone}
+];
+const TEXMAP={};TEX.forEach(t=>TEXMAP[t.id]=t);
+
+function heightToNormal(h,N,target){
+  const gx=new Float32Array(N*N),gy=new Float32Array(N*N);
+  for(let y=0;y<N;y++){const yu=((y-1+N)%N)*N,yd=((y+1)%N)*N,r=y*N;for(let x=0;x<N;x++){const xl=(x-1+N)%N,xr=(x+1)%N;
+    gx[r+x]=(h[r+xr]-h[r+xl])*.5;gy[r+x]=(h[yd+x]-h[yu+x])*.5;}}
+  const R=rng(3),samp=[];for(let k=0;k<4096;k++){const i=(R()*N*N)|0;samp.push(Math.hypot(gx[i],gy[i]));}
+  samp.sort((a,b)=>a-b);const k=target/(samp[(samp.length*.9)|0]||1e-4);
+  const out=new Uint8ClampedArray(N*N*4);
+  for(let i=0;i<N*N;i++){let nx=-gx[i]*k,ny=-gy[i]*k,nz=1;const l=Math.hypot(nx,ny,nz);nx/=l;ny/=l;nz/=l;
+    out[i*4]=(nx*.5+.5)*255;out[i*4+1]=(ny*.5+.5)*255;out[i*4+2]=(nz*.5+.5)*255;out[i*4+3]=255;}
+  return out;
+}
+function finishTex(def,A,H){
+  def.alb=A;def.nrm=heightToNormal(H,TS,def.target);
+  let s=0,n=0,s2=0;for(let i=0;i<TS*TS;i++){const l=.2126*LIN[A[i*4]]+.7152*LIN[A[i*4+1]]+.0722*LIN[A[i*4+2]];s2+=l;if(A[i*4+3]>127){s+=l;n++;}}
+  def.mean=n?s/n:s2/(TS*TS);
+  def.albTex=mkRepeatTex(A);def.nrmTex=mkRepeatTex(def.nrm);def.ready=true;
+}
+function ensureTex(def){if(def.ready)return;const A=new Uint8ClampedArray(TS*TS*4),H=new Float32Array(TS*TS);def.gen(A,H,TS);finishTex(def,A,H);}
+
+/* ---------- WebGL ---------- */
+const glc=$('#gl'),ov=$('#ov'),og=ov.getContext('2d');
+const gl=glc.getContext('webgl',{preserveDrawingBuffer:true,alpha:false,antialias:false,premultipliedAlpha:false});
+if(!gl){$('#hint').textContent='This browser cannot run the preview (WebGL is off).';return;}
+gl.pixelStorei(gl.UNPACK_ALIGNMENT,1);
+const aniso=gl.getExtension('EXT_texture_filter_anisotropic')||gl.getExtension('WEBKIT_EXT_texture_filter_anisotropic');
+const VS='attribute vec2 p;varying vec2 vUv;void main(){vUv=vec2(p.x*.5+.5,.5-p.y*.5);gl_Position=vec4(p,0.,1.);}';
+const FS_COPY='precision mediump float;varying vec2 vUv;uniform sampler2D uPhoto;void main(){gl_FragColor=vec4(texture2D(uPhoto,vUv).rgb,1.);}';
+const FS_WALL=`#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+varying vec2 vUv;
+uniform sampler2D uPhoto,uMask,uAlb,uNrm;
+uniform mat3 uInv;
+uniform vec2 uTiles,uTexel;
+uniform float uKind,uTintMix,uAlbMean,uDepth,uMeanLum,uHi;
+uniform vec3 uTint,uLight;
+vec3 lin(vec3 c){return pow(c,vec3(2.2));}
+float luma(vec3 c){return dot(c,vec3(.2126,.7152,.0722));}
+void main(){
+  float m=texture2D(uMask,vUv).r*.4+(texture2D(uMask,vUv+vec2(uTexel.x,0.)).r+texture2D(uMask,vUv-vec2(uTexel.x,0.)).r+texture2D(uMask,vUv+vec2(0.,uTexel.y)).r+texture2D(uMask,vUv-vec2(0.,uTexel.y)).r)*.15;
+  vec3 ph=lin(texture2D(uPhoto,vUv).rgb);
+  float shade=clamp(luma(ph)/uMeanLum,0.,3.);
+  vec3 base=uTint;
+  if(uKind>.5){
+    vec3 q=uInv*vec3(vUv,1.);
+    vec2 t=(q.xy/q.z)*uTiles;
+    vec4 a=texture2D(uAlb,t);
+    vec3 al=lin(a.rgb);
+    float tm=clamp(a.a+uTintMix,0.,1.);
+    base=mix(al,uTint*(luma(al)/uAlbMean),tm);
+    vec3 n=texture2D(uNrm,t).rgb*2.-1.;
+    n=normalize(vec3(n.xy*uDepth,max(n.z,.05)));
+    base*=max(dot(n,uLight),0.)/max(uLight.z,.2);
+  }
+  vec3 col=mix(base*shade,vec3(.16,.28,.82),uHi);
+  gl_FragColor=vec4(pow(clamp(col,0.,1.),vec3(1./2.2)),m);
+}`;
+function prog(fs){
+  const mk=(t,s)=>{const sh=gl.createShader(t);gl.shaderSource(sh,s);gl.compileShader(sh);if(!gl.getShaderParameter(sh,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(sh));return sh;};
+  const p=gl.createProgram();gl.attachShader(p,mk(gl.VERTEX_SHADER,VS));gl.attachShader(p,mk(gl.FRAGMENT_SHADER,fs));gl.bindAttribLocation(p,0,'p');gl.linkProgram(p);
+  const u={},n=gl.getProgramParameter(p,gl.ACTIVE_UNIFORMS);for(let i=0;i<n;i++){const a=gl.getActiveUniform(p,i);u[a.name.replace('[0]','')]=gl.getUniformLocation(p,a.name);}
+  return{p,u};
+}
+const PC=prog(FS_COPY),PW=prog(FS_WALL);
+const vb=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,vb);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
+gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,2,gl.FLOAT,false,0,0);
+function mkTex(){const t=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,t);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);return t;}
+function mkRepeatTex(data){const t=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,t);
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,TS,TS,0,gl.RGBA,gl.UNSIGNED_BYTE,data);gl.generateMipmap(gl.TEXTURE_2D);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.REPEAT);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.REPEAT);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+  if(aniso)gl.texParameterf(gl.TEXTURE_2D,aniso.TEXTURE_MAX_ANISOTROPY_EXT,Math.min(8,gl.getParameter(aniso.MAX_TEXTURE_MAX_ANISOTROPY_EXT)));return t;}
+const dummy=mkTex();gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array([128,128,255,255]));
+const bindTex=(unit,t)=>{gl.activeTexture(gl.TEXTURE0+unit);gl.bindTexture(gl.TEXTURE_2D,t);};
+
+/* ---------- State ---------- */
+const S={W:0,H:0,photoTex:null,walls:[],sel:-1,mode:'tap',tol:14,brush:26,finish:{kind:'colour',color:'#A8B5A0',tex:'plaster',size:1,depth:1,tint:false},undo:[],before:false,flash:null,raf:0,userTex:0,photoId:0,photoCanvas:null,aiWall:null,aiLab:null,aiCanvas:null,aiFlash:0};
+const maskCache=new Map();
+const selWall=()=>S.walls[S.sel]||null;
+const curFinish=()=>{const w=LIVE.on?null:selWall();return w?w.finish:S.finish;};
+
+/* ---------- Photo analysis: Lab colour + edge map ---------- */
+function labInto(rgba,N,lab,lum,L0){
+  const f=t=>t>.008856?Math.cbrt(t):7.787*t+.137931;
+  for(let i=0;i<N;i++){const r=LIN[rgba[i*4]],g=LIN[rgba[i*4+1]],b=LIN[rgba[i*4+2]];
+    const X=(.4124*r+.3576*g+.1805*b)/.95047,Y=.2126*r+.7152*g+.0722*b,Z=(.0193*r+.1192*g+.9505*b)/1.08883;
+    const fx=f(X),fy=f(Y),fz=f(Z);const L=116*fy-16;lab[i*3]=L;lab[i*3+1]=500*(fx-fy);lab[i*3+2]=200*(fy-fz);lum[i]=Y;L0[i]=L;}
+}
+function edgesInto(L0,W,H,t,b,e){
+  for(let y=0;y<H;y++){const r=y*W;for(let x=0;x<W;x++){const i=r+x;t[i]=(L0[x>0?i-1:i]+L0[i]+L0[x<W-1?i+1:i])/3;}}
+  for(let y=0;y<H;y++){const r=y*W;for(let x=0;x<W;x++){const i=r+x;b[i]=(t[y>0?i-W:i]+t[i]+t[y<H-1?i+W:i])/3;}}
+  for(let y=1;y<H-1;y++){for(let x=1;x<W-1;x++){const i=y*W+x;
+    const gx=(b[i-W+1]+2*b[i+1]+b[i+W+1])-(b[i-W-1]+2*b[i-1]+b[i+W-1]);
+    const gy=(b[i+W-1]+2*b[i+W]+b[i+W+1])-(b[i-W-1]+2*b[i-W]+b[i-W+1]);
+    e[i]=Math.sqrt(gx*gx+gy*gy)*.25;}}
+  // copy edges onto the outer pixel ring, otherwise the selection can sneak around a wall along the image border
+  for(let x=0;x<W;x++){e[x]=e[W+x];e[(H-1)*W+x]=e[(H-2)*W+x];}
+  for(let y=0;y<H;y++){e[y*W]=e[y*W+1];e[y*W+W-1]=e[y*W+W-2];}
+}
+function analyse(rgba){
+  const W=S.W,H=S.H,N=W*H;const lab=new Float32Array(N*3),lum=new Float32Array(N),L0=new Float32Array(N),e=new Float32Array(N);
+  labInto(rgba,N,lab,lum,L0);edgesInto(L0,W,H,new Float32Array(N),new Float32Array(N),e);
+  S.lab=lab;S.lum=lum;S.edge=e;
+}
+
+/* ---------- Wall selection: lighting-tolerant flood fill ---------- */
+function flood(m,sx,sy,tol,F){
+  F=F||{W:S.W,H:S.H,lab:S.lab,edge:S.edge,ai:S.aiWall};
+  const W=F.W,H=F.H,lab=F.lab,edge=F.edge,N=W*H;sx=clamp(Math.round(sx),0,W-1);sy=clamp(Math.round(sy),0,H-1);
+  let L=0,A=0,B=0,c=0;
+  if(F.ref){L=F.ref[0];A=F.ref[1];B=F.ref[2];}
+  else{for(let dy=-3;dy<=3;dy++)for(let dx=-3;dx<=3;dx++){const x=sx+dx,y=sy+dy;if(x<0||y<0||x>=W||y>=H)continue;const k=(y*W+x)*3;L+=lab[k];A+=lab[k+1];B+=lab[k+2];c++;}
+    L/=c;A/=c;B/=c;}
+  const t2=tol*tol,eT=3+tol*.5,wL=.35;
+  const vis=F.vis||new Uint8Array(N),st=F.st||new Int32Array(N);let sp=0;if(F.vis)vis.fill(0);
+  let x0=sx,x1=sx,y0=sy,y1=sy;
+  const s0=sy*W+sx;vis[s0]=1;m[s0]=255;st[sp++]=s0;
+  // With the AI map: never cross into what the AI calls "not wall" (ceiling, furniture of the same colour),
+  // and allow more colour change where the AI is sure it is wall (warm lamp light, deep shadow). Edges still split one wall from the next.
+  const ai=F.ai&&F.ai[s0]>=100?F.ai:null,c2wide=t2*1.96;
+  function tryP(j){if(vis[j])return;vis[j]=1;if(edge[j]>=eT)return;const k=j*3,dL=(lab[k]-L)*wL,da=lab[k+1]-A,db=lab[k+2]-B,c2=da*da+db*db,d2=dL*dL+c2;
+    // "lighting only" = brightness may change a lot, colour only a little
+    if(ai){const a=ai[j];if(a<70||!(d2<=t2||(a>=170&&c2<=c2wide&&Math.abs(dL)<=21)))return;}else if(d2>t2)return;
+    m[j]=255;st[sp++]=j;}
+  while(sp){const i=st[--sp],x=i%W,y=(i-x)/W;
+    if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;
+    if(x>0)tryP(i-1);if(x<W-1)tryP(i+1);if(y>0)tryP(i-W);if(y<H-1)tryP(i+W);}
+  // grow 2px into similar-coloured pixels the edge test held back, so no halo of old paint is left at object outlines
+  const g2=(tol*1.7)*(tol*1.7);
+  for(let it=0;it<2;it++){const add=[];const ya=Math.max(0,y0-1),yb=Math.min(H-1,y1+1),xa=Math.max(0,x0-1),xb=Math.min(W-1,x1+1);
+    for(let y=ya;y<=yb;y++)for(let x=xa;x<=xb;x++){const i=y*W+x;if(m[i]||(ai&&ai[i]<50))continue;
+      if(!((x>0&&m[i-1]===255)||(x<W-1&&m[i+1]===255)||(y>0&&m[i-W]===255)||(y<H-1&&m[i+W]===255)))continue;
+      const k=i*3,dL=(lab[k]-L)*wL,da=lab[k+1]-A,db=lab[k+2]-B;if(dL*dL+da*da+db*db<=g2)add.push(i);}
+    for(const i of add)m[i]=255;x0=xa;x1=xb;y0=ya;y1=yb;}
+}
+function stamp(m,cx,cy,r,val){const W=S.W,H=S.H,r2=r*r,xa=Math.max(0,Math.floor(cx-r)),xb=Math.min(W-1,Math.ceil(cx+r)),ya=Math.max(0,Math.floor(cy-r)),yb=Math.min(H-1,Math.ceil(cy+r));
+  for(let y=ya;y<=yb;y++)for(let x=xa;x<=xb;x++){const dx=x-cx,dy=y-cy;if(dx*dx+dy*dy<=r2)m[y*W+x]=val;}}
+function strokeSeg(m,ax,ay,bx,by,r,val){const d=Math.hypot(bx-ax,by-ay),n=Math.max(1,Math.ceil(d/(r*.35)));for(let k=0;k<=n;k++){const t=k/n;stamp(m,ax+(bx-ax)*t,ay+(by-ay)*t,r,val);}}
+function applyStroke(m,s){const p=s.pts,v=s.add?255:0;if(p.length<4){stamp(m,p[0],p[1],s.r,v);return;}for(let i=2;i<p.length;i+=2)strokeSeg(m,p[i-2],p[i-1],p[i],p[i+1],s.r,v);}
+
+const maskKey=w=>JSON.stringify([w.seeds,w.strokes]);
+function buildMask(w){
+  const key=maskKey(w);
+  if(w._key!==key||!w._mask){
+    let m=maskCache.get(key);
+    if(!m){m=new Uint8Array(S.W*S.H);for(const s of w.seeds)flood(m,s.x,s.y,s.tol);for(const s of w.strokes)applyStroke(m,s);
+      maskCache.set(key,m);if(maskCache.size>24)maskCache.delete(maskCache.keys().next().value);}
+    w._mask=m;w._key=key;
+  }
+  stats(w);if(w.quadAuto||!w.quad)w.quad=autoQuad(w);geom(w);uploadMask(w);
+}
+function uploadMask(w){if(!w._maskTex)w._maskTex=mkTex();else gl.bindTexture(gl.TEXTURE_2D,w._maskTex);
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.LUMINANCE,S.W,S.H,0,gl.LUMINANCE,gl.UNSIGNED_BYTE,w._mask);}
+function stats(w){
+  const m=w._mask,W=S.W,H=S.H,lum=S.lum;let n=0,sum=0,cx=0,cy=0,lx=0,ly=0,x0=W,y0=H,x1=-1,y1=-1;
+  for(let y=0;y<H;y++){const r=y*W;for(let x=0;x<W;x++){if(m[r+x]>127){const l=lum[r+x];n++;sum+=l;cx+=x;cy+=y;lx+=x*l;ly+=y*l;
+    if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;}}}
+  w._area=n;
+  if(!n){w._meanLum=.5;w._light=[-.5,-.6,.62];w._bb={x0:0,y0:0,x1:W-1,y1:H-1};return;}
+  w._meanLum=Math.max(sum/n,1e-3);w._bb={x0,y0,x1,y1};
+  const dx=lx/sum-cx/n,dy=ly/sum-cy/n,sc=Math.max(x1-x0,y1-y0,1);
+  const ang=Math.hypot(dx,dy)/sc>.004?Math.atan2(dy,dx):Math.atan2(-.8,-.6);
+  const L=[Math.cos(ang)*.8,Math.sin(ang)*.8,.62],l=Math.hypot(L[0],L[1],L[2]);w._light=L.map(v=>v/l);
+}
+/* Guess the wall's perspective from the shape of the selection (vertical lines stay vertical, horizontal lines meet at a vanishing point). */
+function autoQuad(w){
+  const m=w._mask,W=S.W,H=S.H,bb=w._bb;const rect=[[bb.x0,bb.y0],[bb.x1,bb.y0],[bb.x1,bb.y1],[bb.x0,bb.y1]];
+  if(!w._area)return rect;
+  const top=new Int32Array(W).fill(-1),bot=new Int32Array(W).fill(-1),cnt=new Int32Array(W);
+  for(let y=bb.y0;y<=bb.y1;y++){const r=y*W;for(let x=bb.x0;x<=bb.x1;x++)if(m[r+x]>127){if(top[x]<0)top[x]=y;bot[x]=y;cnt[x]++;}}
+  let tot=0;for(let x=bb.x0;x<=bb.x1;x++)tot+=cnt[x];
+  let acc=0,xa=bb.x0,xb=bb.x1;
+  for(let x=bb.x0;x<=bb.x1;x++){acc+=cnt[x];if(acc>=tot*.01){xa=x;break;}}
+  acc=0;for(let x=bb.x1;x>=bb.x0;x--){acc+=cnt[x];if(acc>=tot*.01){xb=x;break;}}
+  if(xb-xa<12)return rect;
+  const span=xb-xa,band=Math.max(2,Math.round(span*.03));
+  function pick(fromLeft,isTop){
+    for(let s=0;s<span*.4;s+=band){let best=isTop?1e9:-1,bx=-1;
+      for(let k=0;k<band;k++){const x=fromLeft?xa+s+k:xb-s-k;if(x<xa||x>xb||top[x]<0)continue;const v=isTop?top[x]:bot[x];if(isTop?v<best:v>best){best=v;bx=x;}}
+      if(bx<0)continue;const clipped=isTop?best<=2:best>=H-3;if(!clipped)return{x:bx,y:best,ok:true};if(s===0&&!clipped)break;}
+    const x=fromLeft?xa:xb;return{x,y:isTop?(top[x]<0?bb.y0:top[x]):(bot[x]<0?bb.y1:bot[x]),ok:false};
+  }
+  const tl=pick(true,true),tr=pick(false,true),bl=pick(true,false),br=pick(false,false);
+  const topOK=tl.ok&&tr.ok&&tr.x>tl.x,botOK=bl.ok&&br.ok&&br.x>bl.x;
+  const sT=topOK?(tr.y-tl.y)/(tr.x-tl.x):0,sB=botOK?(br.y-bl.y)/(br.x-bl.x):0;
+  const lineF=(p,s)=>x=>p.y+s*(x-p.x);
+  let T=null,B=null;const yh=H*.5;
+  if((topOK&&Math.abs(sT)<.03)||(!topOK&&botOK&&Math.abs(sB)<.03)){T=()=>Math.min(tl.y,tr.y);B=()=>Math.max(bl.y,br.y);}
+  else if(topOK&&botOK&&Math.abs(sT-sB)>1e-3){
+    const xv=(bl.y-tl.y+sT*tl.x-sB*bl.x)/(sT-sB),yv=tl.y+sT*(xv-tl.x);
+    if((xv<xa-5||xv>xb+5)&&yv>-.5*H&&yv<1.5*H){T=lineF(tl,sT);B=lineF(bl,sB);}
+  }
+  if(!T&&topOK&&Math.abs(sT)>=.03){const xv=tl.x+(yh-tl.y)/sT;if(xv<xa-5||xv>xb+5){T=lineF(tl,sT);
+    const k=Math.max((bl.y-yh)/Math.abs(bl.x-xv),(br.y-yh)/Math.abs(br.x-xv));B=k>0?x=>yh+k*Math.abs(x-xv):()=>Math.max(bl.y,br.y);}}
+  if(!T&&botOK&&Math.abs(sB)>=.03){const xv=bl.x+(yh-bl.y)/sB;if(xv<xa-5||xv>xb+5){B=lineF(bl,sB);
+    const k=Math.max((yh-tl.y)/Math.abs(tl.x-xv),(yh-tr.y)/Math.abs(tr.x-xv));T=k>0?x=>yh-k*Math.abs(x-xv):()=>Math.min(tl.y,tr.y);}}
+  if(!T){return rect;}
+  const q=[[xa,T(xa)],[xb,T(xb)],[xb,B(xb)],[xa,B(xa)]];
+  if(!(q[3][1]-q[0][1]>8&&q[2][1]-q[1][1]>8))return rect;
+  return q;
+}
+function sq2quad(q){const[x0,y0]=q[0],[x1,y1]=q[1],[x2,y2]=q[2],[x3,y3]=q[3];
+  const dx1=x1-x2,dx2=x3-x2,dy1=y1-y2,dy2=y3-y2,sx=x0-x1+x2-x3,sy=y0-y1+y2-y3;let g=0,h=0;
+  if(Math.abs(sx)>1e-9||Math.abs(sy)>1e-9){const den=dx1*dy2-dx2*dy1;g=(sx*dy2-dx2*sy)/den;h=(dx1*sy-sx*dy1)/den;}
+  return[x1-x0+g*x1,x3-x0+h*x3,x0,y1-y0+g*y1,y3-y0+h*y3,y0,g,h,1];}
+function inv3(m){const[a,b,c,d,e,f,g,h,i]=m;const A=e*i-f*h,B=-(d*i-f*g),C=d*h-e*g,det=a*A+b*B+c*C;
+  return[A/det,-(b*i-c*h)/det,(b*f-c*e)/det,B/det,(a*i-c*g)/det,-(a*f-c*d)/det,C/det,-(a*h-b*g)/det,(a*e-b*d)/det];}
+function geom(w){
+  const Hm=sq2quad(w.quad),I=inv3(Hm),W=S.W,H=S.H;
+  if(!I.every(Number.isFinite)){w._geom=null;return;}
+  const n=[I[0]*W,I[1]*H,I[2],I[3]*W,I[4]*H,I[5],I[6]*W,I[7]*H,I[8]];
+  // real width:height of the wall, assuming a typical phone camera (focal length about 0.78 x the long side)
+  const f=.78*Math.max(W,H),cx=W/2,cy=H/2,k=v=>Math.hypot((v[0]-cx*v[2])/f,(v[1]-cy*v[2])/f,v[2]);
+  const aspect=clamp(k([Hm[0],Hm[3],Hm[6]])/k([Hm[1],Hm[4],Hm[7]]),.15,8);
+  w._geom={inv:new Float32Array([n[0],n[3],n[6],n[1],n[4],n[7],n[2],n[5],n[8]]),aspect};
+}
+
+/* ---------- Render ---------- */
+function requestRender(){if(!S.raf)S.raf=requestAnimationFrame(render);}
+function render(){
+  S.raf=0;if(LIVE.on){renderLive();return;}if(!S.W)return;
+  gl.viewport(0,0,S.W,S.H);gl.disable(gl.BLEND);gl.useProgram(PC.p);bindTex(0,S.photoTex);gl.uniform1i(PC.u.uPhoto,0);gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
+  let again=false;
+  if(!S.before){
+    gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.useProgram(PW.p);const u=PW.u;
+    gl.uniform1i(u.uPhoto,0);gl.uniform1i(u.uMask,1);gl.uniform1i(u.uAlb,2);gl.uniform1i(u.uNrm,3);gl.uniform2f(u.uTexel,1/S.W,1/S.H);
+    const now=performance.now();
+    for(const w of S.walls){
+      if(!w._maskTex||!w._geom)continue;const f=w.finish,def=TEXMAP[f.tex],isTex=f.kind==='texture'&&def&&def.ready;
+      bindTex(1,w._maskTex);bindTex(2,isTex?def.albTex:dummy);bindTex(3,isTex?def.nrmTex:dummy);
+      gl.uniformMatrix3fv(u.uInv,false,w._geom.inv);
+      const tiles=(isTex?def.tiles:1)/(f.size||1);gl.uniform2f(u.uTiles,tiles*w._geom.aspect,tiles);
+      gl.uniform1f(u.uKind,isTex?1:0);const t=hexLin(f.color);gl.uniform3f(u.uTint,t[0],t[1],t[2]);
+      gl.uniform1f(u.uTintMix,isTex&&!def.tint&&f.tint?1:0);gl.uniform1f(u.uAlbMean,isTex?def.mean:1);gl.uniform1f(u.uDepth,f.depth);
+      gl.uniform3f(u.uLight,w._light[0],w._light[1],w._light[2]);gl.uniform1f(u.uMeanLum,w._meanLum);
+      let hi=0;if(S.flash&&S.flash.w===w){const k=(now-S.flash.t)/650;if(k<1){hi=.4*(1-k);again=true;}else S.flash=null;}
+      gl.uniform1f(u.uHi,hi);gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
+    }
+  }
+  drawOverlay();
+  if(S.aiFlash)again=true;
+  if(again)requestRender();
+}
+function cssScale(){const r=ov.getBoundingClientRect();return r.width?ov.width/r.width:1;}
+function drawOverlay(){
+  if(LIVE.on){og.clearRect(0,0,ov.width,ov.height);return;}
+  og.clearRect(0,0,S.W,S.H);const w=selWall(),k=cssScale();
+  if(S.aiFlash&&S.aiCanvas&&!S.before){const t=(performance.now()-S.aiFlash)/2200;if(t<1){og.save();og.globalAlpha=Math.sin(Math.PI*Math.min(1,t*1.15));og.imageSmoothingEnabled=true;og.drawImage(S.aiCanvas,0,0,S.W,S.H);og.restore();}else S.aiFlash=0;}
+  if(!w||S.before)return;
+  if(S.mode==='corners'&&w.quad){
+    const q=w.quad;og.lineJoin='round';
+    og.beginPath();q.forEach((p,i)=>i?og.lineTo(p[0],p[1]):og.moveTo(p[0],p[1]));og.closePath();
+    og.lineWidth=4*k;og.strokeStyle='rgba(0,0,0,.45)';og.stroke();og.setLineDash([9*k,7*k]);og.lineWidth=2*k;og.strokeStyle='#fff';og.stroke();og.setLineDash([]);
+    q.forEach(p=>{og.beginPath();og.arc(p[0],p[1],12*k,0,Math.PI*2);og.fillStyle='#fff';og.fill();og.lineWidth=3.5*k;og.strokeStyle='#2747d0';og.stroke();});
+  }
+  if((S.mode==='brush'||S.mode==='erase')&&S.hover){
+    const r=S.brush*k;og.beginPath();og.arc(S.hover.x,S.hover.y,r,0,Math.PI*2);og.lineWidth=3.5*k;og.strokeStyle='rgba(0,0,0,.5)';og.stroke();og.lineWidth=1.6*k;og.strokeStyle='#fff';og.stroke();
+  }
+}
+const narrow=matchMedia('(max-width: 860px)');let lastRows='';
+function fit(){
+  if(!S.W)return;const app=$('.app'),stage=$('#stage'),FW=LIVE.on?LIVE.cw:S.W,FH=LIVE.on?LIVE.ch:S.H;
+  // on phones the photo area grows or shrinks to the photo's shape, leaving a strip below it for the buttons
+  let rows='';
+  if(narrow.matches){const want=Math.min((stage.clientWidth-16)*FH/FW+76,app.clientHeight*.62);rows='auto '+Math.max(220,Math.round(want))+'px minmax(0,1fr)';}
+  if(rows!==lastRows){lastRows=rows;app.style.gridTemplateRows=rows;}
+  const st=stage.getBoundingClientRect(),padY=narrow.matches?76:16;
+  const s=Math.min((st.width-16)/FW,(st.height-padY)/FH);const fr=$('#frame');fr.style.width=Math.max(10,Math.floor(FW*s))+'px';fr.style.height=Math.max(10,Math.floor(FH*s))+'px';
+  drawOverlay();
+}
+new ResizeObserver(fit).observe($('#stage'));
+narrow.addEventListener('change',fit);
+
+/* ---------- Undo ---------- */
+const snapshot=()=>JSON.stringify({sel:S.sel,walls:S.walls.map(w=>({seeds:w.seeds,strokes:w.strokes,quad:w.quad,quadAuto:w.quadAuto,finish:w.finish}))});
+function pushUndo(){S.undo.push(snapshot());if(S.undo.length>40)S.undo.shift();$('#undoBtn').disabled=false;}
+function undo(){
+  const s=S.undo.pop();if(!s)return;const o=JSON.parse(s);
+  const old=S.walls;S.walls=o.walls.map(x=>Object.assign({},x));S.sel=o.sel;
+  old.forEach(w=>{if(w._maskTex)gl.deleteTexture(w._maskTex);});
+  work(()=>{S.walls.forEach(buildMask);},'Undoing…');
+}
+
+/* ---------- Busy / toast / hints ---------- */
+function work(fn,label){const b=$('#busy');b.textContent=label||'Finding the wall…';b.hidden=false;
+  requestAnimationFrame(()=>setTimeout(()=>{try{fn();}finally{b.hidden=true;ui();requestRender();}},0));}
+let toastT=0;function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.remove('off');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.add('off'),3200);}
+const HINTS={tap:()=>S.walls.length?'Tap another wall to add it, or pick a finish':'Tap a wall to paint it',
+  add:()=>'Tap a part of the wall that was missed',brush:()=>'Paint over areas to include',erase:()=>'Paint over areas to remove',
+  corners:()=>'Drag the 4 dots onto the corners of the wall'};
+const NOTES={add:'Tap any part of this wall that didn\'t get painted. Raise Sensitivity if it stops too early, lower it if paint spills onto the ceiling or furniture.',
+  brush:'Drag over the photo to paint areas in.',erase:'Drag over the photo to take paint off, for example from a lamp or a door.',
+  corners:'Drag each dot to a corner of the wall. This sets the angle of the texture. Colour doesn\'t need it.'};
+
+/* ---------- Walls ---------- */
+function wallAt(p){const i=Math.round(p.y)*S.W+Math.round(p.x);for(let k=S.walls.length-1;k>=0;k--){const m=S.walls[k]._mask;if(m&&m[i]>127)return k;}return -1;}
+function select(i,flash){S.sel=i;const w=selWall();if(w){S.finish=Object.assign({},w.finish);if(flash){S.flash={w,t:performance.now()};}}ui();requestRender();}
+function addWall(p){
+  if(S.walls.length>=4){toast('You can paint up to 4 walls. Remove one to add another.');return;}
+  const w={seeds:[{x:Math.round(p.x),y:Math.round(p.y),tol:S.tol}],strokes:[],quad:null,quadAuto:true,finish:Object.assign({},S.finish)};
+  work(()=>{
+    buildMask(w);
+    if(w._area<S.W*S.H*.002){if(w._maskTex)gl.deleteTexture(w._maskTex);toast('That spot is too small or busy. Tap a plain part of the wall.');return;}
+    pushUndo();S.walls.push(w);S.sel=S.walls.length-1;S.flash={w,t:performance.now()};
+    const i0=Math.round(p.y)*S.W+Math.round(p.x),what=S.aiWall&&S.aiWall[i0]<60?aiLabelAt(p.x,p.y):'';
+    log('tap wall at '+Math.round(p.x)+','+Math.round(p.y)+' area '+(100*w._area/(S.W*S.H)).toFixed(1)+'% ai '+(S.aiWall?S.aiWall[i0]:'-')+(what?' label '+what:''));
+    if(what&&what!=='wall')toast('The AI thinks this is the '+what+', not a wall. It\'s painted anyway. Press Undo if that was a mistake.');
+    else if(w._area>S.W*S.H*.62)toast('That covers most of the photo. If paint spilled onto the floor or ceiling, use Fix edges.');
+    else toast('Wall '+S.walls.length+' added. Now pick a colour or texture.');
+  });
+}
+function removeWall(){const w=selWall();if(!w)return;pushUndo();if(w._maskTex)gl.deleteTexture(w._maskTex);S.walls.splice(S.sel,1);S.sel=Math.min(S.sel,S.walls.length-1);if(!S.walls.length)setMode('tap');ui();requestRender();}
+
+/* ---------- Pointer ---------- */
+function toImg(e){const r=ov.getBoundingClientRect();return{x:(e.clientX-r.left)*ov.width/r.width,y:(e.clientY-r.top)*ov.height/r.height};}
+let down=null,drag=null,stroke=null;
+ov.addEventListener('pointerdown',e=>{
+  if(!S.W)return;ov.setPointerCapture(e.pointerId);down={x:e.clientX,y:e.clientY,moved:false};if(LIVE.on)return;const p=toImg(e),w=selWall();
+  if(S.mode==='corners'&&w&&w.quad){const k=cssScale();let best=-1,bd=34*k;w.quad.forEach((q,i)=>{const d=Math.hypot(q[0]-p.x,q[1]-p.y);if(d<bd){bd=d;best=i;}});
+    if(best>=0){pushUndo();drag={i:best};w.quadAuto=false;}}
+  else if((S.mode==='brush'||S.mode==='erase')&&w){pushUndo();w._mask=w._mask.slice();stroke={r:Math.round(S.brush*cssScale()),add:S.mode==='brush',pts:[Math.round(p.x),Math.round(p.y)]};
+    stamp(w._mask,p.x,p.y,stroke.r,stroke.add?255:0);uploadMask(w);requestRender();}
+});
+ov.addEventListener('pointermove',e=>{
+  if(!S.W)return;if(down&&Math.hypot(e.clientX-down.x,e.clientY-down.y)>8)down.moved=true;if(LIVE.on)return;const p=toImg(e),w=selWall();S.hover=p;
+  if(drag&&w){w.quad[drag.i]=[clamp(p.x,-S.W*.5,S.W*1.5),clamp(p.y,-S.H*.5,S.H*1.5)];geom(w);requestRender();return;}
+  if(stroke&&w){const n=stroke.pts.length;strokeSeg(w._mask,stroke.pts[n-2],stroke.pts[n-1],p.x,p.y,stroke.r,stroke.add?255:0);stroke.pts.push(Math.round(p.x),Math.round(p.y));uploadMask(w);requestRender();return;}
+  if(S.mode==='brush'||S.mode==='erase')drawOverlay();
+});
+function endPointer(e,cancel){
+  if(LIVE.on){if(down&&!down.moved&&!cancel)liveTap(toImg(e));down=null;return;}
+  const w=selWall();
+  if(drag){drag=null;if(w)geom(w);}
+  else if(stroke){if(w){w.strokes.push(stroke);w._key=maskKey(w);maskCache.set(w._key,w._mask);stats(w);geom(w);}stroke=null;}
+  else if(down&&!down.moved&&!cancel)onTap(toImg(e));
+  down=null;ui();requestRender();
+}
+ov.addEventListener('pointerup',e=>endPointer(e,false));
+ov.addEventListener('pointercancel',e=>endPointer(e,true));
+ov.addEventListener('pointerleave',()=>{S.hover=null;if(S.mode==='brush'||S.mode==='erase')drawOverlay();});
+function onTap(p){
+  if(S.mode==='tap'){const hit=wallAt(p);if(hit>=0){select(hit,true);return;}addWall(p);}
+  else if(S.mode==='add'){const w=selWall();if(!w){addWall(p);return;}pushUndo();w.seeds.push({x:Math.round(p.x),y:Math.round(p.y),tol:S.tol});work(()=>buildMask(w));}
+}
+
+/* ---------- Photo loading ---------- */
+function setPhoto(src,sw,sh,isSample){
+  const MAX=1400,s=Math.min(1,MAX/Math.max(sw,sh));S.W=Math.round(sw*s);S.H=Math.round(sh*s);
+  const c=document.createElement('canvas');c.width=S.W;c.height=S.H;const g=c.getContext('2d');g.imageSmoothingQuality='high';g.drawImage(src,0,0,S.W,S.H);
+  analyse(g.getImageData(0,0,S.W,S.H).data);S.photoCanvas=c;S.photoId++;S.aiWall=null;S.aiLab=null;S.aiCanvas=null;S.aiFlash=0;
+  if(!S.photoTex)S.photoTex=mkTex();else gl.bindTexture(gl.TEXTURE_2D,S.photoTex);
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,c);
+  glc.width=ov.width=S.W;glc.height=ov.height=S.H;
+  S.walls.forEach(w=>w._maskTex&&gl.deleteTexture(w._maskTex));S.walls=[];S.sel=-1;S.undo=[];maskCache.clear();S.isSample=!!isSample;
+  setMode('tap');fit();log('photo '+S.W+'x'+S.H+(isSample?' (sample)':''));
+  if(AI.state==='ready'||AI.state==='done'){AI.state='ready';setTimeout(aiAnalyse,30);}
+}
+function loadFile(file){
+  if(!file)return;const url=URL.createObjectURL(file),img=new Image();
+  img.onload=()=>{work(()=>{setPhoto(img,img.naturalWidth,img.naturalHeight,false);URL.revokeObjectURL(url);},'Reading your photo…');toast('Photo ready. Tap a wall to paint it.');};
+  img.onerror=()=>{URL.revokeObjectURL(url);toast('That file couldn\'t be opened. Try a JPG or PNG photo.');};
+  img.src=url;
+}
+$('#camIn').addEventListener('change',e=>{loadFile(e.target.files[0]);e.target.value='';});
+$('#fileIn').addEventListener('change',e=>{loadFile(e.target.files[0]);e.target.value='';});
+$('#sampleBtn').addEventListener('click',()=>work(loadSample,'Setting up the sample…'));
+if(!matchMedia('(pointer:coarse)').matches)$('#camLbl').hidden=true;
+
+/* ---------- AI wall finder (SegFormer-B0 trained on ADE20K, run by ONNX Runtime Web in a background thread) ---------- */
+const LABELS=["wall","building","sky","floor","tree","ceiling","road","bed","windowpane","grass","cabinet","sidewalk","person","earth","door","table","mountain","plant","curtain","chair","car","water","painting","sofa","shelf","house","sea","mirror","rug","field","armchair","seat","fence","desk","rock","wardrobe","lamp","bathtub","railing","cushion","base","box","column","signboard","chest of drawers","counter","sand","sink","skyscraper","fireplace","refrigerator","grandstand","path","stairs","runway","case","pool table","pillow","screen door","stairway","river","bridge","bookcase","blind","coffee table","toilet","flower","book","hill","bench","countertop","stove","palm","kitchen island","computer","swivel chair","boat","bar","arcade machine","hovel","bus","towel","light","truck","tower","chandelier","awning","streetlight","booth","television receiver","airplane","dirt track","apparel","pole","land","bannister","escalator","ottoman","bottle","buffet","poster","stage","van","ship","fountain","conveyer belt","canopy","washer","plaything","swimming pool","stool","barrel","basket","waterfall","tent","bag","minibike","cradle","oven","ball","food","step","tank","trade name","microwave","pot","animal","bicycle","lake","dishwasher","screen","blanket","sculpture","hood","sconce","vase","traffic light","tray","ashcan","fan","pier","crt screen","plate","monitor","bulletin board","shower","radiator","glass","clock","flag"];
+const ORT_URL='https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.3/dist/ort.wasm.min.js';
+const AI_BASE=new URL('ai/',document.baseURI).href;
+const AI={state:'loading',text:'',mode:'',loadMs:0,inferMs:0,errors:[],size:512,worker:null,core:null,reqId:0,pending:null,wallShare:0};
+const errMsg=e=>String(e&&e.message||e);
+// Shared by the worker and the main-thread fallback, so it must not reference anything outside itself.
+function aiCore(ort,base){
+  ort.env.wasm.numThreads=1;ort.env.wasm.simd=true;ort.env.wasm.proxy=false;ort.env.wasm.wasmPaths=base;
+  let session=null;
+  return{
+    async load(){const t0=performance.now();const r=await fetch(base+'segformer-b0-ade.b64.txt');if(!r.ok)throw new Error('model download failed ('+r.status+')');
+      const bin=atob((await r.text()).replace(/\s+/g,''));const buf=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)buf[i]=bin.charCodeAt(i);session=await ort.InferenceSession.create(buf,{executionProviders:['wasm'],graphOptimizationLevel:'all'});return performance.now()-t0;},
+    async run(px,size){const t0=performance.now();const out=await session.run({[session.inputNames[0]]:new ort.Tensor('float32',px,[1,3,size,size])});
+      const lg=out[session.outputNames[0]],C=lg.dims[1],h=lg.dims[2],w=lg.dims[3],d=lg.data,n=h*w,pw=new Float32Array(n),lab=new Uint8Array(n);
+      for(let i=0;i<n;i++){let mx=-1e9,am=0;for(let c=0;c<C;c++){const v=d[c*n+i];if(v>mx){mx=v;am=c;}}let s=0;for(let c=0;c<C;c++)s+=Math.exp(d[c*n+i]-mx);pw[i]=Math.exp(d[i]-mx)/s;lab[i]=am;}
+      return{pw,lab,w,h,ms:performance.now()-t0};}
+  };
+}
+const WORKER_SRC="importScripts('"+ORT_URL+"');\nconst aiCore="+aiCore.toString()+";\nlet core=null;\n"+
+  "onmessage=async e=>{const m=e.data;try{if(m.type==='load'){core=aiCore(self.ort,m.base);const ms=await core.load();postMessage({type:'loaded',ms});}"+
+  "else if(m.type==='run'){const r=await core.run(m.px,m.size);postMessage({type:'result',id:m.id,pw:r.pw,lab:r.lab,w:r.w,h:r.h,ms:r.ms},[r.pw.buffer,r.lab.buffer]);}}"+
+  "catch(err){postMessage({type:'error',id:m.id,stage:m.type,message:String(err&&err.message||err)});}};";
+function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>rej(new Error('script blocked: '+src));document.head.appendChild(s);});}
+function aiInitWorker(){return new Promise((res,rej)=>{
+  let w;try{w=new Worker(URL.createObjectURL(new Blob([WORKER_SRC],{type:'text/javascript'})));}catch(e){rej(e);return;}
+  const to=setTimeout(()=>{w.terminate();rej(new Error('model took over 90 s to load'));},90000);
+  w.onerror=e=>{clearTimeout(to);w.terminate();rej(new Error(e.message||'worker could not start'));};
+  w.onmessage=e=>{const m=e.data;
+    if(m.type==='loaded'){clearTimeout(to);AI.loadMs=m.ms;AI.worker=w;w.onmessage=aiOnMessage;w.onerror=ev=>{AI.errors.push('worker: '+(ev.message||'error'));log('AI worker error '+(ev.message||''));};res();}
+    else if(m.type==='error'){clearTimeout(to);w.terminate();rej(new Error(m.message));}};
+  w.postMessage({type:'load',base:AI_BASE});
+});}
+async function aiInitMain(){if(!window.ort)await loadScript(ORT_URL);AI.core=aiCore(window.ort,AI_BASE);AI.loadMs=await AI.core.load();}
+function aiSetState(st,txt){AI.state=st;AI.text=txt;uiAI();}
+async function aiInit(){
+  aiSetState('loading','Loading the AI wall finder…');log('AI: loading');
+  try{await aiInitWorker();AI.mode='worker';}
+  catch(e){AI.errors.push('worker load: '+errMsg(e));log('AI worker failed: '+errMsg(e));
+    try{await aiInitMain();AI.mode='main thread';}
+    catch(e2){AI.errors.push('main load: '+errMsg(e2));log('AI main thread failed: '+errMsg(e2));aiSetState('failed','The AI can\'t run on this device, so walls are found by colour and edges.');return;}}
+  log('AI loaded ('+AI.mode+') in '+Math.round(AI.loadMs)+' ms');
+  aiSetState('ready','AI wall finder ready');
+  if(S.W)aiAnalyse();
+}
+function aiInput(){
+  const n=AI.size,c=document.createElement('canvas');c.width=c.height=n;const g=c.getContext('2d');g.imageSmoothingQuality='high';g.drawImage(S.photoCanvas,0,0,n,n);
+  const d=g.getImageData(0,0,n,n).data,px=new Float32Array(3*n*n),M=[.485,.456,.406],SD=[.229,.224,.225],nn=n*n;
+  for(let i=0;i<nn;i++){px[i]=(d[i*4]/255-M[0])/SD[0];px[nn+i]=(d[i*4+1]/255-M[1])/SD[1];px[2*nn+i]=(d[i*4+2]/255-M[2])/SD[2];}
+  return px;
+}
+function aiUpsample(pw,w,h){
+  const W=S.W,H=S.H,out=new Uint8Array(W*H);
+  for(let y=0;y<H;y++){const fy=clamp((y+.5)*h/H-.5,0,h-1),y0=Math.floor(fy),y1=Math.min(h-1,y0+1),ty=fy-y0;
+    for(let x=0;x<W;x++){const fx=clamp((x+.5)*w/W-.5,0,w-1),x0=Math.floor(fx),x1=Math.min(w-1,x0+1),tx=fx-x0;
+      out[y*W+x]=((pw[y0*w+x0]*(1-tx)+pw[y0*w+x1]*tx)*(1-ty)+(pw[y1*w+x0]*(1-tx)+pw[y1*w+x1]*tx)*ty)*255;}}
+  return out;
+}
+function aiAnalyse(){
+  if(!(AI.state==='ready'||AI.state==='done')||!S.photoCanvas)return;
+  const pid=S.photoId;aiSetState('running','The AI is looking for walls…');
+  const px=aiInput();
+  const done=r=>{
+    if(pid!==S.photoId){AI.state='ready';aiAnalyse();return;}
+    AI.inferMs=r.ms;S.aiWall=aiUpsample(r.pw,r.w,r.h);S.aiLab={lab:r.lab,w:r.w,h:r.h};maskCache.clear();
+    let share=0;for(let i=0;i<r.pw.length;i++)if(r.pw[i]>.5)share++;AI.wallShare=share/r.pw.length;
+    const c=document.createElement('canvas');c.width=r.w;c.height=r.h;const g=c.getContext('2d'),im=g.createImageData(r.w,r.h);
+    for(let i=0;i<r.pw.length;i++){const a=r.pw[i]>.5?(r.pw[i]-.5)*2:0;im.data[i*4]=70;im.data[i*4+1]=125;im.data[i*4+2]=255;im.data[i*4+3]=a*150;}
+    g.putImageData(im,0,0);S.aiCanvas=c;S.aiFlash=performance.now();
+    log('AI result in '+Math.round(r.ms)+' ms, wall share '+Math.round(AI.wallShare*100)+'%');
+    if(AI.wallShare<.03){aiSetState('done','The AI found no walls in this photo. Tap one yourself.');}
+    else{aiSetState('done','AI found the walls in '+(r.ms/1000).toFixed(1)+' s');if(!S.isSample||S.walls.length===0)toast('AI found the walls (shown in blue). Tap one, or press Find walls for me.');}
+    requestRender();ui();
+  };
+  const fail=m=>{AI.errors.push('run: '+m);log('AI run failed: '+m);aiSetState('failed','The AI couldn\'t read this photo, so walls are found by colour and edges.');};
+  if(AI.worker){const id=++AI.reqId;AI.pending={id,done,fail};AI.worker.postMessage({type:'run',id,px,size:AI.size},[px.buffer]);}
+  else AI.core.run(px,AI.size).then(done,e=>fail(errMsg(e)));
+}
+function aiOnMessage(e){const m=e.data,p=AI.pending;if(!p||m.id!==p.id)return;AI.pending=null;if(m.type==='result')p.done(m);else p.fail(m.message);}
+function aiLabelAt(x,y){if(!S.aiLab)return '';const a=S.aiLab,lx=clamp(Math.floor(x/S.W*a.w),0,a.w-1),ly=clamp(Math.floor(y/S.H*a.h),0,a.h-1);return LABELS[a.lab[ly*a.w+lx]]||'';}
+function uiAI(){
+  const box=$('#aiBox');box.dataset.state=AI.state;$('#aiText').textContent=AI.text;
+  const b=$('#autoBtn');b.hidden=!S.aiWall||AI.wallShare<.03;b.disabled=S.walls.length>=4;
+}
+/* Paint every wall the AI can see: flood from confident wall points not yet covered, keep regions bigger than 1.5% of the photo. */
+function autoWalls(){
+  if(!S.aiWall)return;const W=S.W,H=S.H,N=W*H,cov=new Uint8Array(N);
+  S.walls.forEach(w=>{const m=w._mask;if(m)for(let i=0;i<N;i++)if(m[i]>127)cov[i]=1;});
+  const step=Math.max(8,Math.round(Math.max(W,H)/70)),cands=[];
+  for(let y=step>>1;y<H;y+=step)for(let x=step>>1;x<W;x+=step){const i=y*W+x;if(S.aiWall[i]>=215&&S.edge[i]<3&&!cov[i])cands.push(i);}
+  if(!cands.length){toast('Every wall the AI found is already painted.');return;}
+  pushUndo();
+  work(()=>{
+    let added=0,tries=0;const t0=performance.now();
+    for(const i of cands){
+      if(S.walls.length>=4||tries>=14)break;if(cov[i])continue;tries++;
+      const x=i%W,y=(i-x)/W,w={seeds:[{x,y,tol:S.tol}],strokes:[],quad:null,quadAuto:true,finish:Object.assign({},S.finish)};
+      buildMask(w);let conf=0;for(let j=0;j<N;j++)if(w._mask[j]>127){cov[j]=1;conf+=S.aiWall[j];}
+      conf/=Math.max(1,w._area)*255;
+      // walls run up to the ceiling, so a region that starts low in the photo is furniture the AI misread
+      if(w._area<N*.015||conf<.72||w._bb.y0>H*.4){log('Find walls: skipped area '+(100*w._area/N).toFixed(1)+'% conf '+conf.toFixed(2));if(w._maskTex)gl.deleteTexture(w._maskTex);continue;}
+      S.walls.push(w);added++;
+    }
+    log('Find walls: added '+added+' in '+Math.round(performance.now()-t0)+' ms');
+    if(added){S.sel=S.walls.length-1;S.flash={w:S.walls[S.sel],t:performance.now()};toast(added===1?'Found 1 more wall.':'Found '+added+' walls. Pick a colour or texture for each.');}
+    else{S.undo.pop();toast('No more walls found. Tap one yourself.');}
+  },'Finding all the walls…');
+}
+$('#autoBtn').addEventListener('click',autoWalls);
+
+/* ---------- Test report (stored with this page so Claude can read it) ---------- */
+const LOG=[];function log(s){LOG.push(Math.round(performance.now())+' ms  '+s);if(LOG.length>80)LOG.shift();}
+window.addEventListener('error',e=>log('ERROR '+(e.message||e.type)+(e.lineno?' @'+e.lineno:'')));
+window.addEventListener('unhandledrejection',e=>log('REJECTION '+errMsg(e.reason)));
+let DB=null;
+(async()=>{try{DB=IN_ARTIFACT?await window.claude.use('db'):null;}catch(e){DB=null;}
+  if(DB)$('#testSec').hidden=false;
+  else if(!IN_ARTIFACT){$('#testSec').hidden=false;$('#testBtn').textContent='Copy test report';$('#testInfo').textContent='Copies a short report (browser details, AI and camera speed, errors) so you can paste it into your chat with Claude. Your photos are not included.';}})();
+function glInfo(){try{const ext=gl.getExtension('WEBGL_debug_renderer_info');return{renderer:ext?gl.getParameter(ext.UNMASKED_RENDERER_WEBGL):gl.getParameter(gl.RENDERER),maxTexture:gl.getParameter(gl.MAX_TEXTURE_SIZE),highp:!!gl.getShaderPrecisionFormat(gl.FRAGMENT_SHADER,gl.HIGH_FLOAT).precision};}catch(e){return{error:errMsg(e)};}}
+$('#testBtn').addEventListener('click',async()=>{
+  const btn=$('#testBtn'),msg=$('#testMsg');
+  const data={at:new Date().toISOString(),note:$('#testNote').value.slice(0,2000),userAgent:navigator.userAgent,
+    screen:screen.width+'x'+screen.height+' @'+(window.devicePixelRatio||1)+'x',viewport:innerWidth+'x'+innerHeight,touch:matchMedia('(pointer:coarse)').matches,
+    memoryGB:navigator.deviceMemory||null,cores:navigator.hardwareConcurrency||null,webgl:glInfo(),
+    photo:{size:S.W+'x'+S.H,sample:!!S.isSample,walls:S.walls.length,finishes:S.walls.map(w=>w.finish.kind==='texture'?w.finish.tex:w.finish.color)},
+    ai:{state:AI.state,text:AI.text,mode:AI.mode,loadMs:Math.round(AI.loadMs),inferMs:Math.round(AI.inferMs),wallSharePct:Math.round(AI.wallShare*100),errors:AI.errors.slice(-10)},
+    live:{used:LIVE.used,camera:LIVE.res,fps:+LIVE.fps.toFixed(1),msPerFrame:+LIVE.procMs.toFixed(1),errors:LIVE.errors.slice(-5)},
+    page:location.host||'local',log:LOG.slice(-80)};
+  if(!DB){const txt=JSON.stringify(data,null,1);
+    try{await navigator.clipboard.writeText(txt);msg.textContent='Copied. Paste it into your chat with Claude.';}
+    catch(e){const ta=$('#testNote');ta.value=txt;ta.focus();ta.select();msg.textContent='Select all the text in the box above and copy it.';}
+    return;}
+  btn.disabled=true;msg.textContent='Sending…';
+  try{await DB.collection('reports').add(data);msg.textContent='Sent. Thank you!';$('#testNote').value='';log('report sent');}
+  catch(e){msg.textContent=e&&e.code==='quota_exceeded'?'The report store is full.':'Couldn\'t send ('+(e&&e.code||errMsg(e))+'). Try again.';}
+  btn.disabled=false;
+});
+
+/* ---------- Sample room (drawn in code, so the page needs no image files) ---------- */
+function sampleRoom(){
+  const W=1400,H=1000,c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');
+  const P=pts=>{g.beginPath();g.moveTo(pts[0][0],pts[0][1]);for(let i=1;i<pts.length;i++)g.lineTo(pts[i][0],pts[i][1]);g.closePath();};
+  const fillP=(pts,f)=>{P(pts);g.fillStyle=f;g.fill();};
+  const lg=(x0,y0,x1,y1,st)=>{const r=g.createLinearGradient(x0,y0,x1,y1);st.forEach(s=>r.addColorStop(s[0],s[1]));return r;};
+  const rg=(x,y,r0,r1,st)=>{const r=g.createRadialGradient(x,y,r0,x,y,r1);st.forEach(s=>r.addColorStop(s[0],s[1]));return r;};
+  const rrPath=(x,y,w,h,r)=>{g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath();};
+  const rr=(x,y,w,h,r,f)=>{rrPath(x,y,w,h,r);g.fillStyle=f;g.fill();};
+  const soft=(draw,color,blur,dx,dy)=>{g.save();g.shadowColor=color;g.shadowBlur=blur;g.shadowOffsetX=10000+(dx||0);g.shadowOffsetY=dy||0;g.translate(-10000,0);draw();g.fillStyle='#000';g.fill();g.restore();};
+  const line=(a,b,w,col)=>{g.beginPath();g.moveTo(a[0],a[1]);g.lineTo(b[0],b[1]);g.lineWidth=w;g.strokeStyle=col;g.lineCap='round';g.stroke();};
+  const CEIL=[[153,0],[1347,0],[1170,120],[330,120]],LW=[[0,0],[153,0],[330,120],[330,690],[0,914]],RW=[[1347,0],[1400,0],[1400,914],[1170,690],[1170,120]],FL=[[0,914],[330,690],[1170,690],[1400,914],[1400,1000],[0,1000]];
+  fillP(CEIL,'#efeee9');fillP(CEIL,lg(0,0,0,120,[[0,'rgba(255,255,255,.25)'],[1,'rgba(0,0,0,.07)']]));
+  fillP(LW,'#d8d1c4');fillP(LW,lg(0,0,330,0,[[0,'rgba(255,250,240,.10)'],[1,'rgba(30,20,10,.14)']]));
+  fillP(RW,'#ece5d8');fillP(RW,lg(1170,0,1400,0,[[0,'rgba(0,0,0,.05)'],[1,'rgba(255,250,240,.12)']]));
+  g.fillStyle='#e4ddcf';g.fillRect(330,120,840,570);
+  g.fillStyle=lg(330,0,1170,0,[[0,'rgba(255,248,232,.32)'],[.5,'rgba(255,248,232,.04)'],[1,'rgba(35,25,15,.16)']]);g.fillRect(330,120,840,570);
+  g.fillStyle=lg(0,120,0,690,[[0,'rgba(0,0,0,.06)'],[.25,'rgba(0,0,0,0)'],[.85,'rgba(0,0,0,0)'],[1,'rgba(0,0,0,.07)']]);g.fillRect(330,120,840,570);
+  g.save();g.beginPath();g.rect(330,120,840,570);g.clip();
+  soft(()=>P([[350,170],[600,215],[600,560],[350,640]]),'rgba(255,240,210,.38)',60);
+  g.fillStyle=rg(1105,300,10,270,[[0,'rgba(255,214,160,.24)'],[.5,'rgba(255,214,160,.07)'],[1,'rgba(255,214,160,0)']]);g.fillRect(330,120,840,570);
+  g.fillStyle=lg(330,0,380,0,[[0,'rgba(40,30,20,.18)'],[1,'rgba(40,30,20,0)']]);g.fillRect(330,120,50,570);
+  g.fillStyle=lg(1170,0,1120,0,[[0,'rgba(40,30,20,.16)'],[1,'rgba(40,30,20,0)']]);g.fillRect(1120,120,50,570);
+  g.fillStyle=lg(0,120,0,160,[[0,'rgba(40,30,20,.14)'],[1,'rgba(40,30,20,0)']]);g.fillRect(330,120,840,40);
+  soft(()=>{g.beginPath();g.rect(640,230,190,170);},'rgba(20,12,6,.45)',22,16,12);
+  soft(()=>rrPath(470,455,600,270,50),'rgba(20,12,6,.42)',50,34,6);
+  g.restore();
+  line([330,120],[1170,120],3,'rgba(70,58,44,.55)');line([330,120],[330,690],3,'rgba(70,58,44,.5)');line([1170,120],[1170,690],3,'rgba(70,58,44,.5)');
+  line([330,120],[153,0],3,'rgba(70,58,44,.45)');line([1170,120],[1347,0],3,'rgba(70,58,44,.45)');
+  g.fillStyle='#f3f1ec';g.fillRect(330,666,840,24);line([330,666],[1170,666],2,'rgba(60,50,40,.4)');
+  fillP([[0,914],[330,690],[330,666],[0,880]],'#e9e6df');line([0,880],[330,666],2,'rgba(60,50,40,.35)');
+  fillP([[1400,914],[1170,690],[1170,666],[1400,880]],'#f1eee8');line([1400,880],[1170,666],2,'rgba(60,50,40,.35)');
+  fillP(FL,'#a5744a');fillP(FL,lg(0,690,0,1000,[[0,'rgba(40,20,5,.3)'],[1,'rgba(255,230,190,.1)']]));
+  g.save();P(FL);g.clip();
+  for(let i=-14;i<=14;i++){const xb=700+i*95,t=(690-405)/(1000-405);line([750+(xb-750)*t,690],[xb,1000],2,'rgba(55,30,12,.35)');}
+  const R=rng(5);for(let k=0;k<70;k++){const y=696+R()*300,i=Math.floor(R()*28)-14,t0=(y-405)/595;line([750+(700+i*95-750)*t0,y],[750+(700+(i+1)*95-750)*t0,y],1.5,'rgba(55,30,12,.3)');}
+  soft(()=>P([[40,940],[330,760],[600,790],[440,1000],[100,1000]]),'rgba(255,236,200,.3)',50);
+  g.restore();
+  const WIN=[[90,200],[250,250],[250,560],[90,610]];
+  soft(()=>P([[96,206],[256,256],[256,566],[96,616]]),'rgba(30,20,10,.35)',10);
+  fillP(WIN,'#f4f3ef');fillP([[102,214],[238,256],[238,548],[102,596]],lg(0,200,0,600,[[0,'#cfe2ee'],[.6,'#eaf3f7'],[1,'#fbfcfb']]));
+  line([170,236],[170,572],6,'#f4f3ef');line([102,405],[238,402],6,'#f4f3ef');P(WIN);g.lineWidth=2;g.strokeStyle='rgba(60,50,40,.4)';g.stroke();
+  g.fillStyle='#2a221d';g.fillRect(640,230,190,170);g.fillStyle='#f1ede4';g.fillRect(652,242,166,146);g.fillStyle='#d8c6a8';g.fillRect(672,258,126,114);
+  g.fillStyle='#c0603f';g.beginPath();g.arc(712,300,26,0,Math.PI*2);g.fill();g.fillStyle='#2f4a5a';g.fillRect(730,300,52,62);
+  g.strokeStyle='#1d1d1b';g.lineWidth=3;g.beginPath();g.moveTo(684,352);g.quadraticCurveTo(720,320,790,338);g.stroke();
+  line([1105,372],[1105,735],6,'#a9864a');g.fillStyle='#2a2826';g.beginPath();g.ellipse(1105,738,42,9,0,0,Math.PI*2);g.fill();
+  fillP([[1058,298],[1152,298],[1172,372],[1038,372]],lg(1038,0,1172,0,[[0,'#3a3d40'],[.5,'#24272a'],[1,'#17191b']]));
+  g.fillStyle='rgba(255,215,160,.6)';g.beginPath();g.ellipse(1105,372,67,6,0,0,Math.PI*2);g.fill();
+  soft(()=>{g.beginPath();g.ellipse(770,738,340,22,0,0,Math.PI*2);},'rgba(20,10,4,.55)',30);
+  rr(478,462,560,160,42,lg(0,462,0,622,[[0,'#3c7176'],[1,'#264f53']]));
+  rr(446,540,96,190,38,lg(446,0,542,0,[[0,'#2f6267'],[1,'#22474b']]));
+  rr(976,540,96,190,38,lg(976,0,1072,0,[[0,'#2a5a5f'],[1,'#1d4044']]));
+  rr(520,598,476,82,26,lg(0,598,0,680,[[0,'#3d7378'],[1,'#2b585c']]));
+  rr(474,660,598,70,22,lg(0,660,0,730,[[0,'#24494d'],[1,'#1a3739']]));
+  g.fillStyle='#3b2a1d';g.fillRect(500,728,14,20);g.fillRect(1032,728,14,20);
+  rr(560,520,150,108,30,lg(560,520,710,628,[[0,'#d8aa48'],[1,'#a97a26']]));rr(806,520,150,108,30,lg(806,520,956,628,[[0,'#d3a443'],[1,'#a17322']]));
+  soft(()=>{g.beginPath();g.ellipse(398,712,52,9,0,0,Math.PI*2);},'rgba(20,10,4,.5)',14);
+  const R2=rng(11),GR=['#3f6b35','#4f7d3f','#2f5428','#5a8a46'];
+  for(let k=0;k<28;k++){const a=-Math.PI/2+(R2()-.5)*2.3,len=80+R2()*140,bx=394,by=626,ex=bx+Math.cos(a)*len,ey=by+Math.sin(a)*len*.95;
+    line([bx,by],[ex,ey],3,'#3b5a2c');g.save();g.translate(ex,ey);g.rotate(a);g.beginPath();g.ellipse(0,0,30+R2()*18,12+R2()*6,0,0,Math.PI*2);g.fillStyle=GR[(R2()*GR.length)|0];g.fill();g.restore();}
+  fillP([[352,622],[436,622],[426,708],[362,708]],lg(352,0,436,0,[[0,'#b4643f'],[1,'#8a4428']]));
+  const id=g.getImageData(0,0,W,H),d=id.data,R3=rng(3);for(let i=0;i<d.length;i+=4){const n=(R3()-.5)*7;d[i]+=n;d[i+1]+=n;d[i+2]+=n;}g.putImageData(id,0,0);
+  g.fillStyle=rg(700,520,320,920,[[0,'rgba(0,0,0,0)'],[1,'rgba(0,0,0,.22)']]);g.fillRect(0,0,W,H);
+  return c;
+}
+function loadSample(){
+  const c=sampleRoom();setPhoto(c,c.width,c.height,true);ensureTex(TEXMAP.plaster);
+  S.walls=[
+    {seeds:[{x:1000,y:250,tol:14},{x:1140,y:520,tol:14}],strokes:[],quad:[[330,120],[1170,120],[1170,690],[330,690]],quadAuto:false,finish:{kind:'texture',color:'#B98B6E',tex:'plaster',size:1,depth:1,tint:false}},
+    {seeds:[{x:40,y:420,tol:14}],strokes:[],quad:[[180,18],[330,120],[330,690],[180,792]],quadAuto:false,finish:{kind:'colour',color:'#A8B5A0',tex:'plaster',size:1,depth:1,tint:false}}
+  ];
+  S.walls.forEach(buildMask);S.sel=0;S.finish=Object.assign({},S.walls[0].finish);
+}
+
+/* ---------- Your own texture ---------- */
+function addUserTexture(file){
+  if(!file)return;const url=URL.createObjectURL(file),img=new Image();
+  img.onerror=()=>{URL.revokeObjectURL(url);toast('That file couldn\'t be opened. Try a JPG or PNG photo.');};
+  img.onload=()=>work(()=>{
+    const N=TS,c=document.createElement('canvas');c.width=c.height=N;const g=c.getContext('2d');
+    const s=Math.max(N/img.naturalWidth,N/img.naturalHeight);g.imageSmoothingQuality='high';
+    g.drawImage(img,(N-img.naturalWidth*s)/2,(N-img.naturalHeight*s)/2,img.naturalWidth*s,img.naturalHeight*s);URL.revokeObjectURL(url);
+    const src=g.getImageData(0,0,N,N).data,A=new Uint8ClampedArray(N*N*4),H=new Float32Array(N*N);
+    // blend with a half-shifted copy near the edges so the tile repeats without visible seams
+    for(let y=0;y<N;y++)for(let x=0;x<N;x++){const i=y*N+x,j=((y+N/2)%N)*N+((x+N/2)%N);
+      const dx=Math.min(x,N-1-x)/(N/2),dy=Math.min(y,N-1-y)/(N/2),w=smooth(0,.35,Math.min(dx,dy));
+      for(let ch=0;ch<3;ch++)A[i*4+ch]=src[i*4+ch]*w+src[j*4+ch]*(1-w);A[i*4+3]=0;}
+    const L=new Float32Array(N*N);for(let i=0;i<N*N;i++)L[i]=(.2126*A[i*4]+.7152*A[i*4+1]+.0722*A[i*4+2])/255;
+    for(let i=0;i<N*N;i++){const x=i%N,y=(i-x)/N;let s2=0;for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++)s2+=L[((y+dy+N)%N)*N+((x+dx+N)%N)];H[i]=s2/9;}
+    S.userTex++;const def={id:'user'+S.userTex,name:'My texture '+S.userTex,tint:false,tiles:3,target:.4,user:true};
+    finishTex(def,A,H);TEX.push(def);TEXMAP[def.id]=def;buildTextureTiles();
+    applyFinish({kind:'texture',tex:def.id,tint:false},true);toast('Texture added. Use "Pattern size" to match its real size.');
+  },'Making it seamless…');
+  img.src=url;
+}
+$('#texIn').addEventListener('change',e=>{addUserTexture(e.target.files[0]);e.target.value='';});
+
+/* ---------- Thumbnails ---------- */
+const thumbCache={},thumbBig=document.createElement('canvas'),thumbSmall=document.createElement('canvas');
+thumbBig.width=thumbBig.height=TS;thumbSmall.width=thumbSmall.height=132;
+function thumb(def,hex){
+  if(!def.ready)return null;const key=def.id+'|'+(def.tint?hex:'');if(thumbCache[key])return thumbCache[key];
+  const N=TS,a=def.alb,nr=def.nrm,img=new ImageData(N,N),o=img.data,t=hexLin(hex),Lx=-.5,Ly=-.6,Lz=.62,ln=Math.hypot(Lx,Ly,Lz);
+  for(let i=0;i<N*N;i++){let r=LIN[a[i*4]],g=LIN[a[i*4+1]],b=LIN[a[i*4+2]];const m=def.tint?a[i*4+3]/255:0;
+    if(m>0){const l=(.2126*r+.7152*g+.0722*b)/def.mean;r+=(t[0]*l-r)*m;g+=(t[1]*l-g)*m;b+=(t[2]*l-b)*m;}
+    const nx=nr[i*4]/127.5-1,ny=nr[i*4+1]/127.5-1,nz=nr[i*4+2]/127.5-1,d=Math.max(0,(nx*Lx+ny*Ly+nz*Lz)/ln)/(Lz/ln);
+    o[i*4]=Math.pow(Math.min(1,r*d),1/2.2)*255;o[i*4+1]=Math.pow(Math.min(1,g*d),1/2.2)*255;o[i*4+2]=Math.pow(Math.min(1,b*d),1/2.2)*255;o[i*4+3]=255;}
+  thumbBig.getContext('2d').putImageData(img,0,0);const sg=thumbSmall.getContext('2d');sg.imageSmoothingQuality='high';sg.drawImage(thumbBig,0,0,TS,TS,0,0,132,132);
+  return thumbCache[key]=thumbSmall.toDataURL('image/jpeg',.85);
+}
+let thumbJob=0;
+function refreshThumbs(){
+  clearTimeout(thumbJob);const hex=curFinish().color;const tiles=[...document.querySelectorAll('#textures .sw[data-id]')];let k=0;
+  const step=()=>{if(k>=tiles.length){refreshWallChips();return;}const b=tiles[k++],def=TEXMAP[b.dataset.id];
+    if(!def.ready){ensureTex(def);}const u=thumb(def,hex);if(u)b.querySelector('.c').style.backgroundImage='url('+u+')';thumbJob=setTimeout(step,0);};
+  thumbJob=setTimeout(step,0);
+}
+
+/* ---------- Finish controls ---------- */
+let sliding=false;
+function applyFinish(patch,undoable){
+  if(LIVE.on){Object.assign(S.finish,patch);ui();requestRender();if('color' in patch)refreshThumbs();if(patch.kind==='texture'&&LIVE.locked)toast('Live view shows the colour. Press Freeze to try the texture on a still photo.');return;}
+  const w=selWall();
+  if(!w){Object.assign(S.finish,patch);ui();toast('Tap a wall in the photo first.');return;}
+  if(undoable)pushUndo();
+  if(patch.kind==='texture'&&patch.tex)ensureTex(TEXMAP[patch.tex]);
+  if(patch.kind==='texture'&&!patch.tex)ensureTex(TEXMAP[w.finish.tex]);
+  Object.assign(w.finish,patch);S.finish=Object.assign({},w.finish);
+  ui();requestRender();
+  if('color' in patch)refreshThumbs();else refreshWallChips();
+}
+function buildSwatches(){
+  const grid=$('#swatches'),strip=$('#strip');grid.innerHTML='';strip.innerHTML='';
+  COLOURS.forEach(([name,hex])=>{
+    const b=document.createElement('button');b.type='button';b.className='sw';b.dataset.hex=hex;b.style.setProperty('--c',hex);b.setAttribute('aria-pressed','false');
+    b.innerHTML='<span class="c"></span><span class="t">'+name+'<small>LRV '+lrv(hex)+'</small></span>';
+    b.addEventListener('click',()=>applyFinish({kind:'colour',color:hex},true));grid.appendChild(b);
+    const d=document.createElement('button');d.type='button';d.className='dot';d.dataset.hex=hex;d.style.setProperty('--c',hex);d.setAttribute('aria-label',name);d.title=name;d.setAttribute('aria-pressed','false');
+    d.addEventListener('click',()=>{const f=curFinish(),def=TEXMAP[f.tex];const p={color:hex};if(def&&!def.tint)p.tint=true;applyFinish(p,true);});strip.appendChild(d);
+  });
+}
+function buildTextureTiles(){
+  const grid=$('#textures');grid.innerHTML='';
+  const add=document.createElement('label');add.className='sw add';add.htmlFor='texIn';add.tabIndex=0;
+  add.innerHTML='<span class="c">+</span><span class="t">Your texture<small>Upload a photo</small></span>';
+  add.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();$('#texIn').click();}});grid.appendChild(add);
+  [...TEX.filter(t=>t.user).reverse(),...TEX.filter(t=>!t.user)].forEach(def=>{const b=document.createElement('button');b.type='button';b.className='sw';b.dataset.id=def.id;b.setAttribute('aria-pressed','false');
+    b.innerHTML='<span class="c"></span><span class="t">'+def.name+'<small>'+(def.user?'Your photo':def.tint?'Takes your colour':'Own colour')+'</small></span>';
+    b.addEventListener('click',()=>{if(!def.ready)work(()=>ensureTex(def),'Making the texture…');applyFinish({kind:'texture',tex:def.id},true);});grid.appendChild(b);});
+  refreshThumbs();
+}
+$('#tabColour').addEventListener('click',()=>applyFinish({kind:'colour'},true));
+$('#tabTexture').addEventListener('click',()=>applyFinish({kind:'texture'},true));
+$('#customColor').addEventListener('change',e=>applyFinish({color:e.target.value.toUpperCase()},true));
+function slider(id,key,toVal){const el=$(id);
+  el.addEventListener('input',()=>{if(!selWall())return;if(!sliding){pushUndo();sliding=true;}const w=selWall();w.finish[key]=toVal(+el.value);S.finish=Object.assign({},w.finish);ui();requestRender();});
+  el.addEventListener('change',()=>{sliding=false;});}
+slider('#sizeR','size',v=>v/100);slider('#depthR','depth',v=>v/100);
+$('#tintChk').addEventListener('change',e=>applyFinish({tint:e.target.checked},true));
+
+/* ---------- Wall + edit controls ---------- */
+function setMode(m){S.mode=m;if(m==='tap')$('#editBox').hidden=true;ui();drawOverlay();}
+$('#editBtn').addEventListener('click',()=>{if(!selWall())return;const box=$('#editBox');if(box.hidden){box.hidden=false;setMode('add');}else setMode('tap');});
+$('#doneBtn').addEventListener('click',()=>setMode('tap'));
+document.querySelectorAll('.seg button').forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.mode)));
+$('#delBtn').addEventListener('click',removeWall);
+$('#allBtn').addEventListener('click',()=>{const w=selWall();if(!w||S.walls.length<2)return;pushUndo();S.walls.forEach(o=>o.finish=Object.assign({},w.finish));toast('All walls now have the same finish.');ui();requestRender();refreshWallChips();});
+$('#resetCorners').addEventListener('click',()=>{const w=selWall();if(!w)return;pushUndo();w.quadAuto=true;w.quad=autoQuad(w);geom(w);ui();requestRender();});
+$('#tolR').addEventListener('input',()=>{$('#tolOut').textContent=$('#tolR').value;});
+$('#tolR').addEventListener('change',()=>{const v=+$('#tolR').value;S.tol=v;const w=selWall();if(!w)return;pushUndo();w.seeds=w.seeds.map(s=>Object.assign({},s,{tol:v}));work(()=>buildMask(w));});
+$('#brushR').addEventListener('input',()=>{S.brush=+$('#brushR').value;$('#brushOut').textContent=S.brush+' px';});
+$('#undoBtn').addEventListener('click',undo);
+const bb=$('#beforeBtn');
+const beforeOn=e=>{e.preventDefault();S.before=true;bb.classList.add('on');requestRender();},beforeOff=()=>{if(!S.before)return;S.before=false;bb.classList.remove('on');requestRender();};
+bb.addEventListener('pointerdown',beforeOn);['pointerup','pointerleave','pointercancel'].forEach(t=>bb.addEventListener(t,beforeOff));
+bb.addEventListener('keydown',e=>{if(e.key===' '||e.key==='Enter')beforeOn(e);});bb.addEventListener('keyup',beforeOff);
+bb.addEventListener('contextmenu',e=>e.preventDefault());
+
+/* ---------- Save (only where the viewer allows file saves) ---------- */
+let DL=null;
+(async()=>{try{DL=IN_ARTIFACT?await window.claude.use('downloads'):null;}catch(e){DL=null;}if(DL||!IN_ARTIFACT)$('#saveBtn').hidden=false;})();
+$('#saveBtn').addEventListener('click',()=>{
+  render();
+  glc.toBlob(async b=>{
+    if(!b){toast('The picture couldn\'t be made.');return;}
+    if(DL){try{await DL.save({filename:'wall-try-on.jpg',data:b});toast('Picture saved.');}
+      catch(e){if(e&&e.code==='declined')return;if(e&&e.code==='rate_limited'){toast('A save is already waiting for you.');return;}toast('Saving isn\'t available here.');}return;}
+    const file=new File([b],'wall-try-on.jpg',{type:'image/jpeg'});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file],title:'Wall Try-On'});return;}catch(e){if(e&&e.name==='AbortError')return;}}
+    const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='wall-try-on.jpg';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},4000);toast('Picture saved.');
+  },'image/jpeg',.92);
+});
+
+/* ---------- UI refresh ---------- */
+function refreshWallChips(){
+  const box=$('#walls');box.innerHTML='';
+  S.walls.forEach((w,i)=>{const b=document.createElement('button');b.type='button';b.className='wallchip';b.setAttribute('aria-pressed',String(i===S.sel));
+    const f=w.finish,def=TEXMAP[f.tex],img=f.kind==='texture'&&def?thumb(def,f.color):null;
+    const ic=document.createElement('i');ic.style.setProperty('--c',f.color);if(img)ic.style.backgroundImage='url('+img+')';
+    b.appendChild(ic);b.appendChild(document.createTextNode('Wall '+(i+1)));
+    b.title=f.kind==='texture'&&def?def.name+(def.tint||f.tint?' · '+colourName(f.color):''):colourName(f.color);
+    b.addEventListener('click',()=>select(i,true));box.appendChild(b);});
+  $('#wallsEmpty').hidden=S.walls.length>0;
+}
+function ui(){
+  const w=selWall(),f=curFinish(),def=TEXMAP[f.tex];
+  const step=!S.W?1:S.walls.length?3:2;document.querySelectorAll('#steps li').forEach(li=>{if(+li.dataset.step===step)li.setAttribute('aria-current','step');else li.removeAttribute('aria-current');});
+  refreshWallChips();
+  ['#editBtn','#delBtn'].forEach(s=>$(s).disabled=!w);$('#allBtn').disabled=!w||S.walls.length<2;
+  $('#finishFor').textContent=w?'for Wall '+(S.sel+1):'';
+  const isTex=f.kind==='texture';$('#tabColour').setAttribute('aria-selected',String(!isTex));$('#tabTexture').setAttribute('aria-selected',String(isTex));
+  $('#colourPane').hidden=isTex;$('#texturePane').hidden=!isTex;
+  document.querySelectorAll('#swatches .sw').forEach(b=>b.setAttribute('aria-pressed',String(!isTex&&b.dataset.hex.toLowerCase()===f.color.toLowerCase())));
+  document.querySelectorAll('#strip .dot').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.hex.toLowerCase()===f.color.toLowerCase())));
+  document.querySelectorAll('#textures .sw[data-id]').forEach(b=>b.setAttribute('aria-pressed',String(isTex&&b.dataset.id===f.tex)));
+  $('#customColor').value=f.color.toLowerCase();
+  $('#tintRow').hidden=!def||def.tint;$('#tintChk').checked=!!f.tint;
+  $('#sizeR').value=Math.round((f.size||1)*100);$('#sizeOut').textContent=Math.round((f.size||1)*100)+'%';
+  $('#depthR').value=Math.round(f.depth*100);$('#depthOut').textContent=Math.round(f.depth*100)+'%';
+  if(!w&&S.mode!=='tap'){S.mode='tap';$('#editBox').hidden=true;}
+  const editing=S.mode!=='tap';$('#editBox').hidden=!editing;
+  document.querySelectorAll('.seg button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mode===S.mode)));
+  $('#editNote').textContent=NOTES[S.mode]||'';
+  $('#tolField').hidden=S.mode!=='add';$('#brushField').hidden=!(S.mode==='brush'||S.mode==='erase');$('#resetCorners').hidden=S.mode!=='corners';
+  const tv=w&&w.seeds.length?w.seeds[0].tol:S.tol;$('#tolR').value=tv;$('#tolOut').textContent=tv;$('#brushR').value=S.brush;$('#brushOut').textContent=S.brush+' px';
+  $('#undoBtn').disabled=!S.undo.length;uiAI();
+  $('#hint').textContent=HINTS[S.mode]();
+  ov.style.cursor=S.mode==='corners'?'grab':S.mode==='brush'||S.mode==='erase'?'none':'crosshair';
+  const L=LIVE.on;$('.app').classList.toggle('live',L);$('#liveBadge').hidden=!L;$('#freezeBtn').hidden=!L;$('#stopBtn').hidden=!L;$('#undoBtn').hidden=L;$('#liveNote').hidden=!L;$('#liveBtn').hidden=L;
+  ['#aiBox','#walls','#wallActions'].forEach(q=>{$(q).hidden=L;});
+  if(L){$('#wallsEmpty').hidden=true;$('#editBox').hidden=true;$('#finishFor').textContent='live view';
+    $('#hint').textContent=LIVE.locked?'Painting live. Tap another wall to switch.':'Tap a wall to paint it live';
+    document.querySelectorAll('#steps li').forEach(li=>{if(+li.dataset.step===(LIVE.locked?3:2))li.setAttribute('aria-current','step');else li.removeAttribute('aria-current');});}
+}
+
+/* ---------- Live camera: paint one wall on the moving video ----------
+   Each frame is shrunk to ~384 px, the wall is found again by colour + edges, starting from every point that was wall in the last frame,
+   and the full-size video is recoloured on the GPU with the same shading-preserving shader as photos. */
+const LIVE={on:false,used:false,stream:null,video:null,tex:null,maskTex:null,vw:0,vh:0,pw:0,ph:0,cw:0,ch:0,ctx:null,
+  locked:null,seed:null,cx:null,cy:null,mean:.3,lost:0,fps:0,procMs:0,last:0,frames:0,res:'',errors:[],handle:0};
+async function liveStart(){
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
+    toast(IN_ARTIFACT?'Live camera can\'t run inside claude.ai. Open the GitHub link on your phone.':'This browser can\'t open the camera here. The page needs an https:// address.');return;}
+  let stream;
+  try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}},audio:false});}
+  catch(e){const n=e&&e.name||'Error';LIVE.errors.push(n+': '+errMsg(e));log('camera failed: '+n+' '+errMsg(e));
+    toast(n==='NotAllowedError'?(IN_ARTIFACT?'Live camera is blocked inside claude.ai. Open the GitHub link on your phone instead.':'Camera access was refused. Allow the camera for this site in your browser settings, then try again.')
+      :n==='NotFoundError'||n==='OverconstrainedError'?'No usable camera was found on this device.':'The camera couldn\'t start ('+n+').');
+    return;}
+  let v=LIVE.video;if(!v){v=document.createElement('video');v.className='livevid';v.setAttribute('playsinline','');v.setAttribute('aria-hidden','true');v.muted=true;v.autoplay=true;$('#stage').appendChild(v);LIVE.video=v;}
+  v.srcObject=stream;LIVE.stream=stream;
+  try{await v.play();}catch(e){log('video play: '+errMsg(e));}
+  if(!v.videoWidth)await new Promise(r=>v.addEventListener('loadedmetadata',r,{once:true}));
+  setMode('tap');S.before=false;LIVE.on=true;LIVE.used=true;LIVE.locked=null;LIVE.lost=0;LIVE.last=0;
+  liveSize();log('camera on '+LIVE.res);
+  ui();fit();toast('Tap a wall to paint it live. Move the phone slowly.');
+  liveLoop();
+}
+function liveSize(){
+  const v=LIVE.video,vw=v.videoWidth,vh=v.videoHeight,s=Math.min(1,1280/Math.max(vw,vh)),p=384/Math.max(vw,vh);
+  LIVE.vw=vw;LIVE.vh=vh;LIVE.res=vw+'x'+vh;LIVE.cw=Math.round(vw*s);LIVE.ch=Math.round(vh*s);LIVE.pw=Math.round(vw*p);LIVE.ph=Math.round(vh*p);
+  glc.width=ov.width=LIVE.cw;glc.height=ov.height=LIVE.ch;
+  const c=document.createElement('canvas');c.width=LIVE.pw;c.height=LIVE.ph;LIVE.ctx=c.getContext('2d',{willReadFrequently:true});
+  const N=LIVE.pw*LIVE.ph;
+  Object.assign(LIVE,{lab:new Float32Array(N*3),lum:new Float32Array(N),L0:new Float32Array(N),t:new Float32Array(N),b:new Float32Array(N),edge:new Float32Array(N),
+    mask:new Uint8Array(N),soft:new Uint8Array(N),vis:new Uint8Array(N),st:new Int32Array(N)});
+  if(!LIVE.tex)LIVE.tex=mkTex();if(!LIVE.maskTex)LIVE.maskTex=mkTex();
+  LIVE.locked=null;fit();
+}
+function liveStop(){
+  LIVE.on=false;const v=LIVE.video;
+  if(v&&LIVE.handle){if(v.cancelVideoFrameCallback)v.cancelVideoFrameCallback(LIVE.handle);else cancelAnimationFrame(LIVE.handle);}
+  if(LIVE.stream)LIVE.stream.getTracks().forEach(t=>t.stop());LIVE.stream=null;if(v)v.srcObject=null;
+  log('camera off, '+LIVE.fps.toFixed(1)+' fps, '+LIVE.procMs.toFixed(1)+' ms per frame');
+  glc.width=ov.width=S.W;glc.height=ov.height=S.H;ui();fit();requestRender();
+}
+function liveLoop(){
+  if(!LIVE.on)return;const v=LIVE.video;
+  if(v.readyState>=2&&v.videoWidth){
+    if(v.videoWidth!==LIVE.vw||v.videoHeight!==LIVE.vh)liveSize();
+    liveProcess();renderLive();
+    const now=performance.now();if(LIVE.last){const f=1000/Math.max(1,now-LIVE.last);LIVE.fps=LIVE.fps?LIVE.fps*.9+f*.1:f;}LIVE.last=now;
+    if(++LIVE.frames%240===0)log('live '+LIVE.fps.toFixed(1)+' fps, '+LIVE.procMs.toFixed(1)+' ms per frame');
+  }
+  LIVE.handle=v.requestVideoFrameCallback?v.requestVideoFrameCallback(liveLoop):requestAnimationFrame(liveLoop);
+}
+function liveOk(x,y,t2,eT){
+  const pw=LIVE.pw,ph=LIVE.ph;if(x<0||y<0||x>=pw||y>=ph)return false;const i=y*pw+x,k=i*3,R=LIVE.locked;
+  if(LIVE.edge[i]>=eT)return false;const dl=LIVE.lab[k]-R[0];if(dl>25||dl<-25)return false;
+  const dL=dl*.35,da=LIVE.lab[k+1]-R[1],db=LIVE.lab[k+2]-R[2];return dL*dL+da*da+db*db<=t2;
+}
+function liveFindSeed(tol){
+  const t2=tol*tol*1.6,eT=3+tol*.5,c=[LIVE.seed];if(LIVE.cx!=null)c.push([Math.round(LIVE.cx),Math.round(LIVE.cy)]);
+  for(const p of c)if(liveOk(p[0],p[1],t2,eT)){LIVE.seed=p;return true;}
+  const b=c[c.length-1];
+  for(let r=3;r<=42;r+=3)for(let a=0;a<16;a++){const x=Math.round(b[0]+Math.cos(a*Math.PI/8)*r),y=Math.round(b[1]+Math.sin(a*Math.PI/8)*r);if(liveOk(x,y,t2,eT)){LIVE.seed=[x,y];return true;}}
+  return false;
+}
+// Seeds = grid points that were wall last frame and still match the wall colour now, so the paint follows the whole wall.
+function liveSeeds(tol){
+  const pw=LIVE.pw,ph=LIVE.ph,prev=LIVE.soft,t2=tol*tol*1.3,eT=3+tol*.5,out=[];
+  for(let y=4;y<ph;y+=8)for(let x=4;x<pw;x+=8){const i=y*pw+x;if(prev[i]>160&&liveOk(x,y,t2,eT))out.push(i);}
+  if(!out.length&&LIVE.seed&&liveOk(LIVE.seed[0],LIVE.seed[1],t2,eT))out.push(LIVE.seed[1]*pw+LIVE.seed[0]);
+  if(!out.length&&liveFindSeed(tol))out.push(LIVE.seed[1]*pw+LIVE.seed[0]);
+  return out;
+}
+function liveFlood(m,seeds,tol){
+  const pw=LIVE.pw,ph=LIVE.ph,lab=LIVE.lab,edge=LIVE.edge,R=LIVE.locked,vis=LIVE.vis,st=LIVE.st,t2=tol*tol,eT=3+tol*.5;
+  vis.fill(0);let sp=0;
+  for(const s0 of seeds)if(!vis[s0]){vis[s0]=1;m[s0]=255;st[sp++]=s0;}
+  function tryP(j){if(vis[j])return;vis[j]=1;if(edge[j]>=eT)return;const k=j*3,dL=(lab[k]-R[0])*.5,da=lab[k+1]-R[1],db=lab[k+2]-R[2];
+    if(dL*dL+da*da+db*db>t2)return;m[j]=255;st[sp++]=j;}
+  while(sp){const i=st[--sp],x=i%pw;if(x>0)tryP(i-1);if(x<pw-1)tryP(i+1);if(i>=pw)tryP(i-pw);if(i<pw*(ph-1))tryP(i+pw);}
+  // keep only the big connected areas; a small same-coloured patch (a picture mat, a light switch) is dropped
+  const N=pw*ph,lbl=LIVE.lbl||(LIVE.lbl=new Int32Array(N)),areas=[0];lbl.fill(0);
+  for(let i0=0;i0<N;i0++){if(!m[i0]||lbl[i0])continue;const id=areas.length;let a=0;lbl[i0]=id;st[sp++]=i0;
+    while(sp){const i=st[--sp],x=i%pw;a++;
+      if(x>0&&m[i-1]&&!lbl[i-1]){lbl[i-1]=id;st[sp++]=i-1;}if(x<pw-1&&m[i+1]&&!lbl[i+1]){lbl[i+1]=id;st[sp++]=i+1;}
+      if(i>=pw&&m[i-pw]&&!lbl[i-pw]){lbl[i-pw]=id;st[sp++]=i-pw;}if(i<N-pw&&m[i+pw]&&!lbl[i+pw]){lbl[i+pw]=id;st[sp++]=i+pw;}}
+    areas.push(a);}
+  const big=Math.max(...areas),keep=Math.max(big*.25,N*.01);
+  for(let i=0;i<N;i++)if(m[i]&&areas[lbl[i]]<keep)m[i]=0;
+  let mid=seeds[seeds.length>>1];for(const s0 of seeds)if(m[s0]&&areas[lbl[s0]]===big){mid=s0;break;}LIVE.seed=[mid%pw,(mid/pw)|0];
+}
+function liveProcess(){
+  const t0=performance.now(),pw=LIVE.pw,ph=LIVE.ph,N=pw*ph;
+  LIVE.ctx.drawImage(LIVE.video,0,0,pw,ph);const d=LIVE.ctx.getImageData(0,0,pw,ph).data;
+  labInto(d,N,LIVE.lab,LIVE.lum,LIVE.L0);edgesInto(LIVE.L0,pw,ph,LIVE.t,LIVE.b,LIVE.edge);
+  const m=LIVE.mask;m.fill(0);
+  if(LIVE.locked){
+    const tol=S.tol,seeds=liveSeeds(tol);
+    if(seeds.length){liveFlood(m,seeds,tol);LIVE.lost=0;}
+    else if(++LIVE.lost===24){LIVE.locked=null;toast('Lost the wall. Tap it again.');ui();}
+  }
+  // blend with the last frame so the edge doesn't flicker, then measure the wall's brightness for the shading
+  const sm=LIVE.soft,lab=LIVE.lab,lum=LIVE.lum;let n=0,sum=0,sx=0,sy=0,sL=0;
+  for(let i=0;i<N;i++){const v=(sm[i]*.4+m[i]*.6)|0;sm[i]=v;if(m[i]){n++;sum+=lum[i];sL+=lab[i*3];sx+=i%pw;sy+=(i/pw)|0;}}
+  if(n>20){LIVE.mean=LIVE.mean*.8+(sum/n)*.2;LIVE.cx=sx/n;LIVE.cy=sy/n;LIVE.locked[0]=LIVE.locked[0]*.96+(sL/n)*.04;
+}
+  gl.bindTexture(gl.TEXTURE_2D,LIVE.maskTex);gl.texImage2D(gl.TEXTURE_2D,0,gl.LUMINANCE,pw,ph,0,gl.LUMINANCE,gl.UNSIGNED_BYTE,sm);
+  LIVE.procMs=LIVE.procMs?LIVE.procMs*.9+(performance.now()-t0)*.1:performance.now()-t0;
+}
+function renderLive(){
+  gl.viewport(0,0,LIVE.cw,LIVE.ch);gl.disable(gl.BLEND);gl.useProgram(PC.p);
+  bindTex(0,LIVE.tex);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,LIVE.video);gl.uniform1i(PC.u.uPhoto,0);gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
+  if(!S.before&&LIVE.locked){
+    gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.useProgram(PW.p);const u=PW.u;
+    gl.uniform1i(u.uPhoto,0);gl.uniform1i(u.uMask,1);gl.uniform1i(u.uAlb,2);gl.uniform1i(u.uNrm,3);
+    bindTex(1,LIVE.maskTex);bindTex(2,dummy);bindTex(3,dummy);
+    gl.uniform2f(u.uTexel,1/LIVE.pw,1/LIVE.ph);gl.uniformMatrix3fv(u.uInv,false,new Float32Array([1,0,0,0,1,0,0,0,1]));gl.uniform2f(u.uTiles,1,1);
+    gl.uniform1f(u.uKind,0);const t=hexLin(S.finish.color);gl.uniform3f(u.uTint,t[0],t[1],t[2]);gl.uniform1f(u.uTintMix,0);gl.uniform1f(u.uAlbMean,1);gl.uniform1f(u.uDepth,0);
+    gl.uniform3f(u.uLight,0,0,1);gl.uniform1f(u.uMeanLum,Math.max(LIVE.mean,1e-3));gl.uniform1f(u.uHi,0);gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
+  }
+}
+function liveTap(p){
+  const x=clamp(Math.round(p.x*LIVE.pw/LIVE.cw),0,LIVE.pw-1),y=clamp(Math.round(p.y*LIVE.ph/LIVE.ch),0,LIVE.ph-1);
+  let L=0,A=0,B=0,c=0;
+  for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++){const xx=x+dx,yy=y+dy;if(xx<0||yy<0||xx>=LIVE.pw||yy>=LIVE.ph)continue;const k=(yy*LIVE.pw+xx)*3;L+=LIVE.lab[k];A+=LIVE.lab[k+1];B+=LIVE.lab[k+2];c++;}
+  LIVE.locked=[L/c,A/c,B/c];LIVE.seed=[x,y];LIVE.cx=null;LIVE.cy=null;LIVE.lost=0;LIVE.soft.fill(0);
+  log('live tap '+x+','+y+' Lab '+LIVE.locked.map(v=>v.toFixed(0)).join('/'));
+  if(S.finish.kind==='texture')toast('Live view shows the colour. Press Freeze to try the texture on a still photo.');
+  ui();
+}
+function liveFreeze(){
+  if(!LIVE.on)return;const v=LIVE.video,c=document.createElement('canvas');c.width=v.videoWidth;c.height=v.videoHeight;c.getContext('2d').drawImage(v,0,0);
+  const seed=LIVE.locked&&LIVE.seed?[LIVE.seed[0]/LIVE.pw,LIVE.seed[1]/LIVE.ph]:null;
+  liveStop();log('freeze '+c.width+'x'+c.height);
+  work(()=>{setPhoto(c,c.width,c.height,false);if(seed)setTimeout(()=>addWall({x:seed[0]*S.W,y:seed[1]*S.H}),0);else toast('Photo kept. Tap a wall to paint it.');},'Keeping this photo…');
+}
+$('#liveBtn').addEventListener('click',liveStart);
+$('#stopBtn').addEventListener('click',liveStop);
+$('#freezeBtn').addEventListener('click',liveFreeze);
+
+/* ---------- Start ---------- */
+buildSwatches();
+loadSample();
+buildTextureTiles();
+ui();fit();requestRender();
+aiInit();
+})();
+</script>
