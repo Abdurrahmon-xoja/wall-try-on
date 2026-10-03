@@ -1,0 +1,16 @@
+{
+  "name": "Wall Try-On",
+  "short_name": "Wall Try-On",
+  "description": "Preview paint colours and wall textures on your own room.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#121312",
+  "theme_color": "#1b1c1b",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

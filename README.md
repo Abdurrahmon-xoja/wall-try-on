@@ -8,6 +8,14 @@ Preview paint colours and wall textures on your own room, in the browser.
 
 Open it at **https://abdurrahmon-xoja.github.io/wall-try-on/**. The camera needs `https://`, so live mode does not work from a local file.
 
+## On phones
+
+- Built for phones first: the colour and texture picker sits right under the photo, as swipeable rows.
+- **Add to Home Screen** (Safari share menu, or Chrome's menu) installs it with its own icon and opens it full-screen.
+- Phones work on photos at 1100 px (computers 1400 px) and run the depth AI at a lighter size, to save memory and time.
+- The first visit downloads about 45 MB of AI files, with progress shown under **Walls**; the browser keeps them afterwards.
+- Live camera asks the wall AI about every 1.2 s where the ceiling and floor are, and keeps paint off them.
+
 ## Files
 
 | Path | What it is |

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#1b1c1b"></head><body>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#1b1c1b"><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icons/icon-180.png"><link rel="icon" href="icons/icon-192.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Wall Try-On"><meta name="apple-mobile-web-app-status-bar-style" content="default"></head><body>
 <title>Wall Try-On</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -97,7 +97,7 @@ button,input,label{font:inherit}
 .sw{appearance:none;display:flex;flex-direction:column;padding:0;overflow:hidden;text-align:left;border:1px solid var(--line);border-radius:11px;background:var(--surface);color:var(--ink);cursor:pointer;min-width:0}
 .sw .c{display:block;height:46px;background:var(--c);background-size:cover;background-position:center}
 .grid.tex .sw .c{height:74px;background-color:var(--chip)}
-.sw .t{display:block;padding:6px 8px 7px;font-size:12.5px;font-weight:500;line-height:1.2;overflow-wrap:anywhere}
+.sw .t{display:block;padding:6px 8px 7px;font-size:12.5px;font-weight:500;line-height:1.2;overflow-wrap:break-word;hyphens:auto}
 .sw .t small{display:block;margin-top:2px;font:400 10.5px var(--font-mono);color:var(--muted)}
 .sw[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
 .sw.add .c{display:grid;place-items:center;font:600 28px var(--font-display);color:var(--muted);background:repeating-linear-gradient(45deg,var(--chip) 0 8px,var(--surface) 8px 16px)}
@@ -125,6 +125,9 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px}
 textarea{width:100%;min-height:64px;padding:10px 12px;border:1px solid var(--line);border-radius:11px;background:var(--surface);color:var(--ink);font:14px/1.4 var(--font-body);resize:vertical}
 .testrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px;font-size:13px;color:var(--muted)}
 details{font-size:13.5px;color:var(--muted)}
+.live-btn{flex:1 1 100%}
+html{-webkit-tap-highlight-color:transparent}
+button,.btn,.sw,.dot,.wallchip{touch-action:manipulation}
 details summary{cursor:pointer;font-weight:600;color:var(--ink)}
 details ul{margin:8px 0 0;padding-left:18px;display:grid;gap:4px}
 
@@ -136,6 +139,17 @@ details ul{margin:8px 0 0;padding-left:18px;display:grid;gap:4px}
   .hint{max-width:calc(100% - 214px);font-size:12.5px;padding:8px 12px}
   .tbtn{height:40px;min-width:40px;padding:0 11px}
   .tbtn.icon{width:40px}
+  .app{padding-bottom:calc(10px + env(safe-area-inset-bottom,0px))}
+  body{overscroll-behavior:none}
+  /* phones: photo buttons as one row of tiles, the finish picker straight under the photo */
+  .panel{display:flex;flex-direction:column}
+  .sec-photo{order:0}.sec-finish{order:1}.sec-walls{order:2}.panel>details{order:3}#testSec{order:4}
+  .photo-row{flex-wrap:nowrap;gap:6px}
+  .photo-row .btn{flex:1 1 0;min-width:0;flex-direction:column;gap:4px;min-height:60px;padding:8px 4px;font-size:12px;text-align:center;line-height:1.15}
+  .grid{grid-auto-flow:column;grid-template-columns:none;grid-template-rows:repeat(2,auto);grid-auto-columns:minmax(76px,24%);overflow-x:auto;scroll-snap-type:x proximity;padding:2px 2px 8px;overscroll-behavior-x:contain}
+  .grid.tex{grid-template-columns:none;grid-auto-columns:minmax(96px,31%)}
+  .grid .sw{scroll-snap-align:start}
+  textarea{font-size:16px}
 }
 @media (max-width: 860px){ .app.live .hint{display:none} }
 @media (max-width: 520px){ .steps{display:none} .app.live #beforeBtn .lbl{display:none} .app.live #beforeBtn{width:40px;padding:0} }
@@ -186,13 +200,13 @@ details ul{margin:8px 0 0;padding-left:18px;display:grid;gap:4px}
   </main>
 
   <aside class="panel" id="panel">
-    <section class="sec">
+    <section class="sec sec-photo">
       <h2><span class="n">1</span>Your photo</h2>
-      <button class="btn primary" id="liveBtn" type="button" style="width:100%;margin-bottom:8px">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="13" height="12" rx="2"/><path d="m15.5 10.5 6-3.5v10l-6-3.5z"/></svg>
-        Live camera
-      </button>
-      <div class="row">
+      <div class="row photo-row">
+        <button class="btn primary live-btn" id="liveBtn" type="button">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="13" height="12" rx="2"/><path d="m15.5 10.5 6-3.5v10l-6-3.5z"/></svg>
+          Live camera
+        </button>
         <label class="btn grow" for="camIn" id="camLbl">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
           Take photo
@@ -201,13 +215,16 @@ details ul{margin:8px 0 0;padding-left:18px;display:grid;gap:4px}
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m3 16 5-5 4 4 3-3 6 6"/></svg>
           Choose photo
         </label>
-        <button class="btn quiet" id="sampleBtn" type="button">Sample room</button>
+        <button class="btn quiet" id="sampleBtn" type="button">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/></svg>
+          Sample room
+        </button>
       </div>
       <input id="camIn" type="file" accept="image/*" capture="environment" hidden>
       <input id="fileIn" type="file" accept="image/*" hidden>
     </section>
 
-    <section class="sec">
+    <section class="sec sec-walls">
       <h2><span class="n">2</span>Walls</h2>
       <p class="note" id="liveNote" hidden>Live mode paints one wall at a time in colour. Tap a wall in the camera view, then pick a colour below. For textures and fine edges, press <b>Freeze</b> to keep a still photo.</p>
       <div class="ai" id="aiBox" data-state="loading" aria-live="polite"><i></i><span id="aiText">Loading the AI wall finder…</span></div>
@@ -240,7 +257,7 @@ details ul{margin:8px 0 0;padding-left:18px;display:grid;gap:4px}
       </div>
     </section>
 
-    <section class="sec">
+    <section class="sec sec-finish">
       <h2><span class="n">3</span>Finish <span class="for" id="finishFor"></span></h2>
       <div class="tabs" role="tablist">
         <button type="button" role="tab" id="tabColour" aria-selected="true" aria-controls="colourPane">Colour</button>
@@ -293,6 +310,7 @@ details ul{margin:8px 0 0;padding-left:18px;display:grid;gap:4px}
 'use strict';
 const $=s=>document.querySelector(s);
 const IN_ARTIFACT=!!(window.claude&&window.claude.use);
+const IS_PHONE=matchMedia('(pointer:coarse)').matches&&Math.min(screen.width,screen.height)<900; // phones get smaller working images to save memory and time
 const clamp=(v,a,b)=>v<a?a:v>b?b:v;
 const smooth=(a,b,x)=>{const t=clamp((x-a)/(b-a),0,1);return t*t*(3-2*t);};
 const LIN=new Float32Array(256);for(let i=0;i<256;i++)LIN[i]=Math.pow(i/255,2.2);
@@ -494,7 +512,7 @@ function analyse(rgba){
 
 /* ---------- Wall selection: lighting-tolerant flood fill ---------- */
 function flood(m,sx,sy,tol,F){
-  F=F||{W:S.W,H:S.H,lab:S.lab,edge:S.edge,ai:S.aiWall};
+  F=F||{W:S.W,H:S.H,lab:S.lab,edge:S.edge,ai:S.aiWall,ceil:S.aiCeil,floor:S.aiFloor};
   const W=F.W,H=F.H,lab=F.lab,edge=F.edge,N=W*H;sx=clamp(Math.round(sx),0,W-1);sy=clamp(Math.round(sy),0,H-1);
   let L=0,A=0,B=0,c=0;
   if(F.ref){L=F.ref[0];A=F.ref[1];B=F.ref[2];}
@@ -506,10 +524,10 @@ function flood(m,sx,sy,tol,F){
   const s0=sy*W+sx;vis[s0]=1;m[s0]=255;st[sp++]=s0;
   // With the AI map: never cross into what the AI calls "not wall" (ceiling, furniture of the same colour),
   // and allow more colour change where the AI is sure it is wall (warm lamp light, deep shadow). Edges still split one wall from the next.
-  const ai=F.ai&&F.ai[s0]>=100?F.ai:null,c2wide=t2*1.96;
+  const ai=F.ai&&F.ai[s0]>=100?F.ai:null,c2wide=t2*1.96,cl=ai&&F.ceil,fl=ai&&F.floor; // never paint where the AI is surer of ceiling or floor than of wall
   function tryP(j){if(vis[j])return;vis[j]=1;if(edge[j]>=eT)return;const k=j*3,dL=(lab[k]-L)*wL,da=lab[k+1]-A,db=lab[k+2]-B,c2=da*da+db*db,d2=dL*dL+c2;
     // "lighting only" = brightness may change a lot, colour only a little
-    if(ai){const a=ai[j];if(a<70||!(d2<=t2||(a>=170&&c2<=c2wide&&Math.abs(dL)<=21)))return;}else if(d2>t2)return;
+    if(ai){const a=ai[j];if(a<70||(cl&&cl[j]>a)||(fl&&fl[j]>a)||!(d2<=t2||(a>=170&&c2<=c2wide&&Math.abs(dL)<=21)))return;}else if(d2>t2)return;
     m[j]=255;st[sp++]=j;}
   while(sp){const i=st[--sp],x=i%W,y=(i-x)/W;
     if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;
@@ -517,7 +535,7 @@ function flood(m,sx,sy,tol,F){
   // grow 2px into similar-coloured pixels the edge test held back, so no halo of old paint is left at object outlines
   const g2=(tol*1.7)*(tol*1.7);
   for(let it=0;it<2;it++){const add=[];const ya=Math.max(0,y0-1),yb=Math.min(H-1,y1+1),xa=Math.max(0,x0-1),xb=Math.min(W-1,x1+1);
-    for(let y=ya;y<=yb;y++)for(let x=xa;x<=xb;x++){const i=y*W+x;if(m[i]||(ai&&ai[i]<50))continue;
+    for(let y=ya;y<=yb;y++)for(let x=xa;x<=xb;x++){const i=y*W+x;if(m[i]||(ai&&(ai[i]<50||(cl&&cl[i]>ai[i])||(fl&&fl[i]>ai[i]))))continue;
       if(!((x>0&&m[i-1]===255)||(x<W-1&&m[i+1]===255)||(y>0&&m[i-W]===255)||(y<H-1&&m[i+W]===255)))continue;
       const k=i*3,dL=(lab[k]-L)*wL,da=lab[k+1]-A,db=lab[k+2]-B;if(dL*dL+da*da+db*db<=g2)add.push(i);}
     for(const i of add)m[i]=255;x0=xa;x1=xb;y0=ya;y1=yb;}
@@ -533,7 +551,7 @@ function buildMask(w){
   if(w._key!==key||!w._mask){
     let c=maskCache.get(key);
     if(!c){const m=new Uint8Array(S.W*S.H);for(const s of w.seeds)flood(m,s.x,s.y,s.tol);
-      const fm=S.depth?m.slice():null,plane=S.depth?planeRefine(m,w.seeds):null;if(plane)snapMask(m,fm);for(const s of w.strokes)applyStroke(m,s);
+      const fm=S.aiWall||S.depth?m.slice():null,plane=S.depth?planeRefine(m,w.seeds):null;if(fm)snapMask(m,fm);for(const s of w.strokes)applyStroke(m,s);
       c={m,plane};maskCache.set(key,c);if(maskCache.size>24)maskCache.delete(maskCache.keys().next().value);}
     w._mask=c.m;w._plane=c.plane;w._key=key;
   }
@@ -701,6 +719,7 @@ function addWall(p){
     log('tap wall at '+Math.round(p.x)+','+Math.round(p.y)+' area '+(100*w._area/(S.W*S.H)).toFixed(1)+'% ai '+(S.aiWall?S.aiWall[i0]:'-')+(what?' label '+what:'')+(w._plane?' planes '+w._plane.planes+' cut '+w._plane.cutPct+'%':'')+' in '+w._ms+' ms');
     if(what&&what!=='wall')toast('The AI thinks this is the '+what+', not a wall. It\'s painted anyway. Press Undo if that was a mistake.');
     else if(w._area>S.W*S.H*.62)toast('That covers most of the photo. If paint spilled onto the floor or ceiling, use Fix edges.');
+    else if(!S.isSample&&(AI.state==='loading'||AI.state==='running'||AI.state==='ready'))toast('Wall '+S.walls.length+' added. The AI is still getting ready, so the edges may be rough for a moment. They tidy up by themselves.');
     else toast('Wall '+S.walls.length+' added. Now pick a colour or texture.');
   });
 }
@@ -740,11 +759,11 @@ function onTap(p){
 
 /* ---------- Photo loading ---------- */
 function setPhoto(src,sw,sh,isSample){
-  const MAX=1400,s=Math.min(1,MAX/Math.max(sw,sh));S.W=Math.round(sw*s);S.H=Math.round(sh*s);
+  const MAX=IS_PHONE?1100:1400,s=Math.min(1,MAX/Math.max(sw,sh));S.W=Math.round(sw*s);S.H=Math.round(sh*s);
   const c=document.createElement('canvas');c.width=S.W;c.height=S.H;const g=c.getContext('2d');g.imageSmoothingQuality='high';g.drawImage(src,0,0,S.W,S.H);
   S.rgba=g.getImageData(0,0,S.W,S.H).data;analyse(S.rgba);S.photoCanvas=c;
   const bc=document.createElement('canvas');bc.width=Math.max(8,Math.round(S.W/14));bc.height=Math.max(8,Math.round(S.H/14));const bg=bc.getContext('2d');bg.imageSmoothingQuality='high';bg.drawImage(c,0,0,bc.width,bc.height);
-  if(!S.blurTex)S.blurTex=mkTex();else gl.bindTexture(gl.TEXTURE_2D,S.blurTex);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,bc);S.photoId++;S.aiWall=null;S.aiLab=null;S.aiCanvas=null;S.aiFlash=0;S.depth=null;S.depthLow=null;S.floorP=null;
+  if(!S.blurTex)S.blurTex=mkTex();else gl.bindTexture(gl.TEXTURE_2D,S.blurTex);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,bc);S.photoId++;S.aiWall=null;S.aiLab=null;S.aiCanvas=null;S.aiFlash=0;S.depth=null;S.depthLow=null;S.floorP=null;S.ceilP=null;S.aiCeil=null;S.aiFloor=null;
   if(!S.photoTex)S.photoTex=mkTex();else gl.bindTexture(gl.TEXTURE_2D,S.photoTex);
   gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,c);
   glc.width=ov.width=S.W;glc.height=ov.height=S.H;
@@ -812,6 +831,7 @@ function planeRefine(m,seeds){
   for(const sd of seeds)for(let dy=-6;dy<=6;dy+=3)for(let dx=-6;dx<=6;dx+=3){const x=clamp(Math.round(sd.x)+dx,0,W-1),y=clamp(Math.round(sd.y)+dy,0,H-1),i=y*W+x,X=(x-cx)/f,Y=(y-cy)/f;
     let bi=0,br=1e9;planes.forEach((p,k)=>{const r=Math.abs(D[i]-(p[0]*X+p[1]*Y+p[2]));if(r<br){br=r;bi=k;}});votes[bi]++;}
   const si=votes.indexOf(Math.max(...votes)),P=planes[si],nP=planeNormal(P);
+  [S.floorP,S.ceilP].forEach(q=>{if(q)planes.push(q);}); // floor and ceiling planes from the whole photo, even if only a sliver leaked in
   const tilted=planes.map(p=>angleDeg(planeNormal(p),nP)>22);
   let cut=0;
   for(let i=0;i<N;i++){if(!m[i])continue;const x=i%W,y=(i-x)/W,X=(x-cx)/f,Y=(y-cy)/f,d=D[i],rs=d-(P[0]*X+P[1]*Y+P[2]);
@@ -857,9 +877,9 @@ function snapMask(m,fm){
 }
 /* The relative depth has an unknown offset. Walls stand at right angles to the floor, so pick the offset that makes the
    wall plane perpendicular to the floor plane (when the floor is visible). */
-function floorPlane(){
+function labelPlane(L){
   if(!S.depth||!S.aiLab)return null;const a=S.aiLab,{f,cx,cy}=camK(),px=[],py=[],pd=[];
-  for(let y=0;y<a.h;y++)for(let x=0;x<a.w;x++)if(a.lab[y*a.w+x]===3){const X=Math.round((x+.5)*S.W/a.w),Y=Math.round((y+.5)*S.H/a.h);px.push((X-cx)/f);py.push((Y-cy)/f);pd.push(S.depth[Y*S.W+X]);}
+  for(let y=0;y<a.h;y++)for(let x=0;x<a.w;x++)if(a.lab[y*a.w+x]===L){const X=Math.round((x+.5)*S.W/a.w),Y=Math.round((y+.5)*S.H/a.h);px.push((X-cx)/f);py.push((Y-cy)/f);pd.push(S.depth[Y*S.W+X]);}
   if(px.length<40)return null;const r=ransacPlane(px,py,pd,px.map((_,i)=>i),.02,rng(5));return r&&r.inl.length>px.length*.4?r.p:null;
 }
 function depthShift(P){
@@ -889,7 +909,7 @@ function upF(src,w,h){
   return out;
 }
 function depthInput(){
-  const L=392,a=S.W/S.H;let w,h;if(a>=1){w=L;h=Math.max(14,Math.round(L/a/14)*14);}else{h=L;w=Math.max(14,Math.round(L*a/14)*14);}
+  const L=IS_PHONE?308:392,a=S.W/S.H;let w,h;if(a>=1){w=L;h=Math.max(14,Math.round(L/a/14)*14);}else{h=L;w=Math.max(14,Math.round(L*a/14)*14);}
   const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');g.imageSmoothingQuality='high';g.drawImage(S.photoCanvas,0,0,w,h);
   const d=g.getImageData(0,0,w,h).data,n=w*h,px=new Float32Array(3*n),M=[.485,.456,.406],SD=[.229,.224,.225];
   for(let i=0;i<n;i++){px[i]=(d[i*4]/255-M[0])/SD[0];px[n+i]=(d[i*4+1]/255-M[1])/SD[1];px[2*n+i]=(d[i*4+2]/255-M[2])/SD[2];}
@@ -898,7 +918,7 @@ function depthInput(){
 function depthApply(r){
   const v=Array.from(r.d).sort((a,b)=>a-b),lo=v[(v.length*.02)|0],hi=v[(v.length*.98)|0]||lo+1,k=1/Math.max(hi-lo,1e-6);
   const dn=new Float32Array(r.d.length);for(let i=0;i<dn.length;i++)dn[i]=(r.d[i]-lo)*k;
-  S.depth=upF(dn,r.w,r.h);S.depthLow={d:dn,w:r.w,h:r.h};S.floorP=floorPlane();maskCache.clear();
+  S.depth=upF(dn,r.w,r.h);S.depthLow={d:dn,w:r.w,h:r.h};S.floorP=labelPlane(3);S.ceilP=labelPlane(5);maskCache.clear();
   // re-cut walls the user already made, now that depth is known
   S.walls.forEach(w=>{w._key=null;buildMask(w);});
 }
@@ -914,24 +934,30 @@ const errMsg=e=>String(e&&e.message||e);
 function aiCore(ort,base){
   ort.env.wasm.numThreads=1;ort.env.wasm.simd=true;ort.env.wasm.proxy=false;ort.env.wasm.wasmPaths=base;
   const sessions={};
-  async function bytes(spec){
-    if(spec.b64){let t='';for(const f of spec.files){const r=await fetch(base+f);if(!r.ok)throw new Error(f+' download failed ('+r.status+')');t+=await r.text();}
+  async function bytes(spec,onP){
+    let got=0,total=0;
+    const grab=async f=>{const r=await fetch(base+f);if(!r.ok)throw new Error(f+' download failed ('+r.status+')');total+=+r.headers.get('content-length')||0;
+      if(!r.body||!onP){const b=new Uint8Array(await r.arrayBuffer());got+=b.length;return b;}
+      const rd=r.body.getReader(),parts=[];let last=0;
+      for(;;){const x=await rd.read();if(x.done)break;parts.push(x.value);got+=x.value.length;const t=performance.now();if(t-last>300){last=t;onP(got,total);}}
+      const out=new Uint8Array(parts.reduce((a,q)=>a+q.length,0));let o=0;for(const q of parts){out.set(q,o);o+=q.length;}return out;};
+    if(spec.b64){let t='';const dec=new TextDecoder();for(const f of spec.files)t+=dec.decode(await grab(f));
       const bin=atob(t.replace(/\s+/g,''));const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return u;}
-    const r=await fetch(base+spec.files[0]);if(!r.ok)throw new Error(spec.files[0]+' download failed ('+r.status+')');return new Uint8Array(await r.arrayBuffer());
+    return grab(spec.files[0]);
   }
   return{
-    async load(name,spec){const t0=performance.now();sessions[name]=await ort.InferenceSession.create(await bytes(spec),{executionProviders:['wasm'],graphOptimizationLevel:'all'});return performance.now()-t0;},
+    async load(name,spec,onP){const t0=performance.now();sessions[name]=await ort.InferenceSession.create(await bytes(spec,onP),{executionProviders:['wasm'],graphOptimizationLevel:'all'});return performance.now()-t0;},
     async run(px,size){const s=sessions.seg,t0=performance.now();const out=await s.run({[s.inputNames[0]]:new ort.Tensor('float32',px,[1,3,size,size])});
-      const lg=out[s.outputNames[0]],C=lg.dims[1],h=lg.dims[2],w=lg.dims[3],d=lg.data,n=h*w,pw=new Float32Array(n),lab=new Uint8Array(n);
-      for(let i=0;i<n;i++){let mx=-1e9,am=0;for(let c=0;c<C;c++){const v=d[c*n+i];if(v>mx){mx=v;am=c;}}let sm=0;for(let c=0;c<C;c++)sm+=Math.exp(d[c*n+i]-mx);pw[i]=Math.exp(d[i]-mx)/sm;lab[i]=am;}
-      return{pw,lab,w,h,ms:performance.now()-t0};},
+      const lg=out[s.outputNames[0]],C=lg.dims[1],h=lg.dims[2],w=lg.dims[3],d=lg.data,n=h*w,pw=new Float32Array(n),pc=new Float32Array(n),pf=new Float32Array(n),lab=new Uint8Array(n);
+      for(let i=0;i<n;i++){let mx=-1e9,am=0;for(let c=0;c<C;c++){const v=d[c*n+i];if(v>mx){mx=v;am=c;}}let sm=0;for(let c=0;c<C;c++)sm+=Math.exp(d[c*n+i]-mx);pw[i]=Math.exp(d[i]-mx)/sm;pc[i]=Math.exp(d[5*n+i]-mx)/sm;pf[i]=Math.exp(d[3*n+i]-mx)/sm;lab[i]=am;}
+      return{pw,pc,pf,lab,w,h,ms:performance.now()-t0};},
     async depth(px,w,h){const s=sessions.depth,t0=performance.now();const out=await s.run({[s.inputNames[0]]:new ort.Tensor('float32',px,[1,3,h,w])});
       const t=out[s.outputNames[0]],dh=t.dims[t.dims.length-2],dw=t.dims[t.dims.length-1];return{d:Float32Array.from(t.data),w:dw,h:dh,ms:performance.now()-t0};}
   };
 }
 const WORKER_SRC="importScripts('"+ORT_URL+"');\nconst aiCore="+aiCore.toString()+";\nlet core=null;\n"+
-  "onmessage=async e=>{const m=e.data;try{if(m.type==='load'){if(!core)core=aiCore(self.ort,m.base);const ms=await core.load(m.name,m.spec);postMessage({type:'loaded',name:m.name,ms});}"+
-  "else if(m.type==='run'){const r=await core.run(m.px,m.size);postMessage({type:'result',id:m.id,pw:r.pw,lab:r.lab,w:r.w,h:r.h,ms:r.ms},[r.pw.buffer,r.lab.buffer]);}"+
+  "onmessage=async e=>{const m=e.data;try{if(m.type==='load'){if(!core)core=aiCore(self.ort,m.base);const ms=await core.load(m.name,m.spec,(g,t)=>postMessage({type:'progress',name:m.name,got:g,total:t}));postMessage({type:'loaded',name:m.name,ms});}"+
+  "else if(m.type==='run'){const r=await core.run(m.px,m.size);postMessage({type:'result',id:m.id,pw:r.pw,pc:r.pc,pf:r.pf,lab:r.lab,w:r.w,h:r.h,ms:r.ms},[r.pw.buffer,r.pc.buffer,r.pf.buffer,r.lab.buffer]);}"+
   "else if(m.type==='depth'){const r=await core.depth(m.px,m.w,m.h);postMessage({type:'depthResult',id:m.id,d:r.d,w:r.w,h:r.h,ms:r.ms},[r.d.buffer]);}}"+
   "catch(err){postMessage({type:'error',id:m.id,stage:m.type,name:m.name,message:String(err&&err.message||err)});}};";
 const SEG_SPEC={b64:true,files:['segformer-b0-ade.b64.txt']};
@@ -939,14 +965,19 @@ const DEPTH_SPEC=IN_ARTIFACT?{b64:true,files:['depth.b64.0.txt','depth.b64.1.txt
 function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>rej(new Error('script blocked: '+src));document.head.appendChild(s);});}
 function aiInitWorker(){return new Promise((res,rej)=>{
   let w;try{w=new Worker(URL.createObjectURL(new Blob([WORKER_SRC],{type:'text/javascript'})));}catch(e){rej(e);return;}
-  const to=setTimeout(()=>{w.terminate();rej(new Error('model took over 90 s to load'));},90000);
+  const to=setTimeout(()=>{w.terminate();rej(new Error('model took over 3 minutes to load'));},180000);
   w.onerror=e=>{clearTimeout(to);w.terminate();rej(new Error(e.message||'worker could not start'));};
   w.onmessage=e=>{const m=e.data;
+    if(m.type==='progress'){aiProgress(m.name,m.got,m.total);return;}
     if(m.type==='loaded'){clearTimeout(to);AI.loadMs=m.ms;AI.worker=w;w.onmessage=aiOnMessage;w.onerror=ev=>{AI.errors.push('worker: '+(ev.message||'error'));log('AI worker error '+(ev.message||''));};res();}
     else if(m.type==='error'){clearTimeout(to);w.terminate();rej(new Error(m.message));}};
   w.postMessage({type:'load',name:'seg',spec:SEG_SPEC,base:AI_BASE});
 });}
-async function aiInitMain(){if(!window.ort)await loadScript(ORT_URL);AI.core=aiCore(window.ort,AI_BASE);AI.loadMs=await AI.core.load('seg',SEG_SPEC);}
+async function aiInitMain(){if(!window.ort)await loadScript(ORT_URL);AI.core=aiCore(window.ort,AI_BASE);AI.loadMs=await AI.core.load('seg',SEG_SPEC,(g,t)=>aiProgress('seg',g,t));}
+function aiProgress(name,g,t){
+  const mb=v=>(v/1048576).toFixed(1),amount=t&&g<=t?mb(g)+' of '+mb(t)+' MB':mb(g)+' MB';
+  if(name==='seg')aiSetState('loading','Downloading the wall AI, '+amount+'…');else{AI.depth.progress=amount;aiSetState(AI.state,aiText());}
+}
 function aiSetState(st,txt){AI.state=st;AI.text=txt;uiAI();}
 async function aiInit(){
   aiSetState('loading','Loading the AI wall finder…');log('AI: loading');
@@ -960,7 +991,7 @@ async function aiInit(){
 }
 function aiText(){
   const seg=AI.wallShare<.03?'The AI found no walls in this photo. Tap one yourself.':'AI found the walls in '+(AI.inferMs/1000).toFixed(1)+' s';
-  const dp=AI.depth.state==='done'&&!S.isSample?' · depth '+(AI.depth.ms/1000).toFixed(1)+' s':AI.depth.state==='loading'?' · loading depth…':AI.depth.state==='running'?' · measuring depth…':'';
+  const dp=AI.depth.state==='done'&&!S.isSample?' · depth '+(AI.depth.ms/1000).toFixed(1)+' s':AI.depth.state==='loading'?' · depth AI '+(AI.depth.progress||'…'):AI.depth.state==='running'?' · measuring depth…':'';
   return seg+dp;
 }
 /* Depth runs after the wall finder, in the same background thread. It downloads on first use (27 MB). */
@@ -969,7 +1000,7 @@ function depthLoad(){
   const ok=ms=>{AI.depth.loadMs=ms;AI.depth.state='ready';log('depth loaded in '+Math.round(ms)+' ms');depthRun();};
   const bad=m=>{AI.depth.state='failed';AI.errors.push('depth load: '+m);log('depth load failed: '+m);aiSetState(AI.state,aiText());};
   if(AI.worker){AI.depth.onload={ok,bad};AI.worker.postMessage({type:'load',name:'depth',spec:DEPTH_SPEC,base:AI_BASE});}
-  else AI.core.load('depth',DEPTH_SPEC).then(ok,e=>bad(errMsg(e)));
+  else AI.core.load('depth',DEPTH_SPEC,(g,t)=>aiProgress('depth',g,t)).then(ok,e=>bad(errMsg(e)));
 }
 function depthRun(){
   if(AI.depth.state!=='ready'&&AI.depth.state!=='done')return;if(!S.photoCanvas||AI.depth.pid===S.photoId)return;
@@ -1002,12 +1033,13 @@ function aiAnalyse(){
   const px=aiInput();
   const done=r=>{
     if(pid!==S.photoId){AI.state='ready';aiAnalyse();return;}
-    AI.inferMs=r.ms;S.aiWall=aiUpsample(r.pw,r.w,r.h);S.aiLab={lab:r.lab,w:r.w,h:r.h};maskCache.clear();
+    AI.inferMs=r.ms;S.aiWall=aiUpsample(r.pw,r.w,r.h);S.aiCeil=r.pc?aiUpsample(r.pc,r.w,r.h):null;S.aiFloor=r.pf?aiUpsample(r.pf,r.w,r.h):null;S.aiLab={lab:r.lab,w:r.w,h:r.h};maskCache.clear();
     let share=0;for(let i=0;i<r.pw.length;i++)if(r.pw[i]>.5)share++;AI.wallShare=share/r.pw.length;
     const c=document.createElement('canvas');c.width=r.w;c.height=r.h;const g=c.getContext('2d'),im=g.createImageData(r.w,r.h);
     for(let i=0;i<r.pw.length;i++){const a=r.pw[i]>.5?(r.pw[i]-.5)*2:0;im.data[i*4]=70;im.data[i*4+1]=125;im.data[i*4+2]=255;im.data[i*4+3]=a*150;}
     g.putImageData(im,0,0);S.aiCanvas=c;S.aiFlash=performance.now();
     log('AI result in '+Math.round(r.ms)+' ms, wall share '+Math.round(AI.wallShare*100)+'%');
+    if(S.walls.length&&!S.isSample){S.walls.forEach(w=>{w._key=null;buildMask(w);});log('walls refined with AI');}
     aiSetState('done',aiText());
     if(AI.wallShare>=.03&&(!S.isSample||S.walls.length===0))toast('AI found the walls (shown in blue). Tap one, or press Find walls for me.');
     requestRender();ui();
@@ -1018,6 +1050,8 @@ function aiAnalyse(){
   else AI.core.run(px,AI.size).then(done,e=>fail(errMsg(e)));
 }
 function aiOnMessage(e){const m=e.data;
+  if(m.type==='progress'){aiProgress(m.name,m.got,m.total);return;}
+  if(AI.livePending&&m.id===AI.livePending.id){const t=AI.livePending.t;AI.livePending=null;LIVE.aiBusy=false;if(m.type==='result'&&LIVE.on){liveBlockMap(m);LIVE.aiMs=Math.round(performance.now()-t);}return;}
   if(m.name==='depth'&&(m.type==='loaded'||(m.type==='error'&&m.stage==='load'))){const o=AI.depth.onload;AI.depth.onload=null;if(o){if(m.type==='loaded')o.ok(m.ms);else o.bad(m.message);}return;}
   if(m.type==='depthResult'||(m.type==='error'&&m.stage==='depth')){const q=AI.depth.pending;if(!q||m.id!==q.id)return;AI.depth.pending=null;if(m.type==='depthResult')q.done(m);else q.fail(m.message);return;}
   const p=AI.pending;if(!p||m.id!==p.id)return;AI.pending=null;if(m.type==='result')p.done(m);else p.fail(m.message);}
@@ -1069,7 +1103,8 @@ $('#testBtn').addEventListener('click',async()=>{
     photo:{size:S.W+'x'+S.H,sample:!!S.isSample,walls:S.walls.length,finishes:S.walls.map(w=>w.finish.kind==='texture'?w.finish.tex:w.finish.color)},
     ai:{state:AI.state,text:AI.text,mode:AI.mode,loadMs:Math.round(AI.loadMs),inferMs:Math.round(AI.inferMs),wallSharePct:Math.round(AI.wallShare*100),errors:AI.errors.slice(-10),
       depth:{state:AI.depth.state,loadMs:Math.round(AI.depth.loadMs),ms:Math.round(AI.depth.ms),floor:!!S.floorP,walls:S.walls.map(w=>w._plane?{planes:w._plane.planes,cutPct:w._plane.cutPct}:null)}},
-    live:{used:LIVE.used,camera:LIVE.res,fps:+LIVE.fps.toFixed(1),msPerFrame:+LIVE.procMs.toFixed(1),errors:LIVE.errors.slice(-5)},
+    live:{used:LIVE.used,camera:LIVE.res,fps:+LIVE.fps.toFixed(1),msPerFrame:+LIVE.procMs.toFixed(1),aiGuardMs:LIVE.aiMs||null,errors:LIVE.errors.slice(-5)},
+    phone:IS_PHONE,
     page:location.host||'local',log:LOG.slice(-80)};
   if(!DB){const txt=JSON.stringify(data,null,1);
     try{await navigator.clipboard.writeText(txt);msg.textContent='Copied. Paste it into your chat with Claude.';}
@@ -1148,9 +1183,10 @@ function sampleRoom(){
 }
 function loadSample(){
   const c=sampleRoom();setPhoto(c,c.width,c.height,true);ensureTex(TEXMAP.plaster);
+  const k=S.W/c.width,sc=v=>Math.round(v*k); // the sample's walls are drawn at 1400 px wide
   S.walls=[
-    {seeds:[{x:1000,y:250,tol:14},{x:1140,y:520,tol:14}],strokes:[],quad:[[330,120],[1170,120],[1170,690],[330,690]],quadAuto:false,finish:{kind:'texture',color:'#B98B6E',tex:'plaster',size:1,depth:1,tint:false}},
-    {seeds:[{x:40,y:420,tol:14}],strokes:[],quad:[[180,18],[330,120],[330,690],[180,792]],quadAuto:false,finish:{kind:'colour',color:'#A8B5A0',tex:'plaster',size:1,depth:1,tint:false}}
+    {seeds:[{x:sc(1000),y:sc(250),tol:14},{x:sc(1140),y:sc(520),tol:14}],strokes:[],quad:[[330,120],[1170,120],[1170,690],[330,690]].map(q=>q.map(sc)),quadAuto:false,finish:{kind:'texture',color:'#B98B6E',tex:'plaster',size:1,depth:1,tint:false}},
+    {seeds:[{x:sc(40),y:sc(420),tol:14}],strokes:[],quad:[[180,18],[330,120],[330,690],[180,792]].map(q=>q.map(sc)),quadAuto:false,finish:{kind:'colour',color:'#A8B5A0',tex:'plaster',size:1,depth:1,tint:false}}
   ];
   S.walls.forEach(buildMask);S.sel=0;S.finish=Object.assign({},S.walls[0].finish);
 }
@@ -1340,7 +1376,7 @@ async function liveStart(){
   v.srcObject=stream;LIVE.stream=stream;
   try{await v.play();}catch(e){log('video play: '+errMsg(e));}
   if(!v.videoWidth)await new Promise(r=>v.addEventListener('loadedmetadata',r,{once:true}));
-  setMode('tap');S.before=false;LIVE.on=true;LIVE.used=true;LIVE.locked=null;LIVE.lost=0;LIVE.last=0;
+  setMode('tap');S.before=false;LIVE.on=true;LIVE.used=true;LIVE.locked=null;LIVE.lost=0;LIVE.last=0;LIVE.seg=null;LIVE.aiBusy=false;LIVE.aiT=0;
   liveSize();log('camera on '+LIVE.res);
   ui();fit();toast('Tap a wall to paint it live. Move the phone slowly.');
   liveLoop();
@@ -1393,12 +1429,31 @@ function liveSeeds(tol){
   if(!out.length&&liveFindSeed(tol))out.push(LIVE.seed[1]*pw+LIVE.seed[0]);
   return out;
 }
+// Smoothly upscaled "not wall" map for the live frame: ceiling or floor clearly more likely than wall.
+function liveBlockMap(r){
+  const pw=LIVE.pw,ph=LIVE.ph,b=LIVE.block&&LIVE.block.length===pw*ph?LIVE.block:(LIVE.block=new Uint8Array(pw*ph)),w=r.w,h=r.h;
+  for(let y=0;y<ph;y++){const fy=clamp((y+.5)*h/ph-.5,0,h-1),y0=Math.floor(fy),y1=Math.min(h-1,y0+1),ty=fy-y0;
+    for(let x=0;x<pw;x++){const fx=clamp((x+.5)*w/pw-.5,0,w-1),x0=Math.floor(fx),x1=Math.min(w-1,x0+1),tx=fx-x0;
+      const bil=A=>(A[y0*w+x0]*(1-tx)+A[y0*w+x1]*tx)*(1-ty)+(A[y1*w+x0]*(1-tx)+A[y1*w+x1]*tx)*ty,wv=bil(r.pw);
+      b[y*pw+x]=bil(r.pc)>wv+.08||bil(r.pf)>wv+.08?1:0;}}
+  LIVE.seg=true;
+}
+function liveAiTick(){
+  if(!AI.worker||!(AI.state==='done'||AI.state==='ready')||LIVE.aiBusy||performance.now()-LIVE.aiT<1200)return;
+  LIVE.aiBusy=true;LIVE.aiT=performance.now();
+  const n=AI.size,c=LIVE.aiCanvas||(LIVE.aiCanvas=document.createElement('canvas'));c.width=c.height=n;const g=c.getContext('2d',{willReadFrequently:true});g.drawImage(LIVE.video,0,0,n,n);
+  const d=g.getImageData(0,0,n,n).data,nn=n*n,px=new Float32Array(3*nn),M=[.485,.456,.406],SD=[.229,.224,.225];
+  for(let i=0;i<nn;i++){px[i]=(d[i*4]/255-M[0])/SD[0];px[nn+i]=(d[i*4+1]/255-M[1])/SD[1];px[2*nn+i]=(d[i*4+2]/255-M[2])/SD[2];}
+  const id=++AI.reqId;AI.livePending={id,t:performance.now()};AI.worker.postMessage({type:'run',id,px,size:n},[px.buffer]);
+}
 function liveFlood(m,seeds,tol){
-  const pw=LIVE.pw,ph=LIVE.ph,lab=LIVE.lab,edge=LIVE.edge,R=LIVE.locked,vis=LIVE.vis,st=LIVE.st,t2=tol*tol,eT=3+tol*.5;
+  const pw=LIVE.pw,ph=LIVE.ph,lab=LIVE.lab,edge=LIVE.edge,R=LIVE.locked,vis=LIVE.vis,st=LIVE.st,t2=tol*tol,eT=3+tol*.5,bk=LIVE.seg&&LIVE.block&&LIVE.block.length===pw*ph?LIVE.block:null;
   vis.fill(0);let sp=0;
   for(const s0 of seeds)if(!vis[s0]){vis[s0]=1;m[s0]=255;st[sp++]=s0;}
   function tryP(j){if(vis[j])return;vis[j]=1;if(edge[j]>=eT)return;const k=j*3,dL=(lab[k]-R[0])*.5,da=lab[k+1]-R[1],db=lab[k+2]-R[2];
-    if(dL*dL+da*da+db*db>t2)return;m[j]=255;st[sp++]=j;}
+    if(dL*dL+da*da+db*db>t2)return;
+    if(bk&&bk[j])return; // the AI says ceiling or floor here
+    m[j]=255;st[sp++]=j;}
   while(sp){const i=st[--sp],x=i%pw;if(x>0)tryP(i-1);if(x<pw-1)tryP(i+1);if(i>=pw)tryP(i-pw);if(i<pw*(ph-1))tryP(i+pw);}
   // keep only the big connected areas; a small same-coloured patch (a picture mat, a light switch) is dropped
   const N=pw*ph,lbl=LIVE.lbl||(LIVE.lbl=new Int32Array(N)),areas=[0];lbl.fill(0);
@@ -1413,6 +1468,7 @@ function liveFlood(m,seeds,tol){
 }
 function liveProcess(){
   const t0=performance.now(),pw=LIVE.pw,ph=LIVE.ph,N=pw*ph;
+  if(LIVE.locked)liveAiTick();
   LIVE.ctx.drawImage(LIVE.video,0,0,pw,ph);const d=LIVE.ctx.getImageData(0,0,pw,ph).data;
   labInto(d,N,LIVE.lab,LIVE.lum,LIVE.L0);edgesInto(LIVE.L0,pw,ph,LIVE.t,LIVE.b,LIVE.edge);
   const m=LIVE.mask;m.fill(0);
