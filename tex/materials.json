@@ -1,0 +1,73 @@
+{
+ "plaster": {
+  "name": "Lime plaster",
+  "src": "white_plaster_02",
+  "tint": true,
+  "sizeM": 1.0,
+  "mean": 0.132,
+  "authors": [
+   "Rob Tuytel"
+  ]
+ },
+ "micro": {
+  "name": "Microcement",
+  "src": "plaster_grey_04",
+  "tint": true,
+  "sizeM": 1.5,
+  "mean": 0.0871,
+  "authors": [
+   "Rob Tuytel"
+  ]
+ },
+ "redbrick": {
+  "name": "Red brick",
+  "src": "red_brick_03",
+  "tint": false,
+  "sizeM": 1.0,
+  "mean": 0.0688,
+  "authors": [
+   "Rob Tuytel"
+  ]
+ },
+ "oldbrick": {
+  "name": "Reclaimed brick",
+  "src": "brick_wall_001",
+  "tint": false,
+  "sizeM": 3.0,
+  "mean": 0.0744,
+  "authors": [
+   "Rob Tuytel",
+   "Dimitrios Savva"
+  ]
+ },
+ "planks": {
+  "name": "Weathered planks",
+  "src": "brown_planks_03",
+  "tint": false,
+  "sizeM": 1.0,
+  "mean": 0.1125,
+  "authors": [
+   "Rob Tuytel"
+  ]
+ },
+ "sandstone": {
+  "name": "Sandstone",
+  "src": "sandstone_blocks_05",
+  "tint": false,
+  "sizeM": 3.0,
+  "mean": 0.3025,
+  "authors": [
+   "Rob Tuytel"
+  ]
+ },
+ "limestone": {
+  "name": "Limestone tiles",
+  "src": "marble_01",
+  "tint": false,
+  "sizeM": 1.5,
+  "mean": 0.3321,
+  "authors": [
+   "Rob Tuytel"
+  ]
+ }
+}

@@ -78,7 +78,7 @@ button,input,label{font:inherit}
 .btn.quiet{border-color:transparent;background:var(--chip)}
 .btn[disabled]{opacity:.45;cursor:default}
 .grow{flex:1 1 0;min-width:0}
-:is(.btn,.tbtn,.sw,.dot,.wallchip,.tabs button,.seg button):focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+:is(.btn,.tbtn,.sw,.dot,.wallchip,.tabs button,.seg button,.seg3 button):focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
 .walls{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
 .wallchip{appearance:none;display:flex;align-items:center;gap:8px;min-height:40px;padding:5px 13px 5px 5px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--ink);font-weight:600;font-size:13.5px;cursor:pointer}
@@ -88,8 +88,9 @@ button,input,label{font:inherit}
 
 .tabs,.seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;margin-bottom:12px;background:var(--chip);border-radius:11px}
 .seg{grid-template-columns:repeat(4,minmax(0,1fr))}
-.tabs button,.seg button{appearance:none;border:0;background:transparent;color:var(--muted);padding:9px 4px;border-radius:8px;font-weight:600;font-size:13.5px;cursor:pointer}
-.tabs button[aria-selected="true"],.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.1)}
+.seg3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:4px;background:var(--chip);border-radius:11px}
+.tabs button,.seg button,.seg3 button{appearance:none;border:0;background:transparent;color:var(--muted);padding:9px 4px;border-radius:8px;font-weight:600;font-size:13.5px;cursor:pointer}
+.tabs button[aria-selected="true"],.seg button[aria-pressed="true"],.seg3 button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.1)}
 
 .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
 .grid.tex{grid-template-columns:repeat(3,minmax(0,1fr))}
@@ -258,6 +259,12 @@ details ul{margin:8px 0 0;padding-left:18px;display:grid;gap:4px}
         <label class="field"><span>Pattern size <output id="sizeOut"></output></span><input type="range" id="sizeR" min="40" max="250" step="5" value="100"></label>
         <label class="field"><span>Depth <output id="depthOut"></output></span><input type="range" id="depthR" min="0" max="200" step="5" value="100"></label>
       </div>
+      <div class="sub">Sheen</div>
+      <div class="seg3" role="group" aria-label="Sheen">
+        <button type="button" data-sheen="0" aria-pressed="true">Matt</button>
+        <button type="button" data-sheen="0.5" aria-pressed="false">Satin</button>
+        <button type="button" data-sheen="1" aria-pressed="false">Gloss</button>
+      </div>
     </section>
 
     <details class="sec">
@@ -267,6 +274,7 @@ details ul{margin:8px 0 0;padding-left:18px;display:grid;gap:4px}
         <li>Hold the phone level and get the whole wall in the frame.</li>
         <li>For textures, use <b>Fix edges → Corners</b> to line the dots up with the wall's corners.</li>
         <li>Colours on screen are a preview. Check a real tester pot before you buy.</li>
+        <li>Scanned textures by Poly Haven (CC0). Wall AI: SegFormer (NVIDIA, non-commercial) and Depth Anything V2 (Apache-2.0).</li>
       </ul>
     </details>
 
@@ -312,18 +320,9 @@ const colourName=h=>{const c=COLOURS.find(c=>c[1].toLowerCase()===String(h).toLo
 /* ---------- Procedural textures (512px, seamless) ----------
    albedo RGBA: alpha 255 = this pixel takes the paint colour, 0 = keeps its own colour */
 const TS=512;
-function genPlaster(A,H,N){for(let y=0;y<N;y++)for(let x=0;x<N;x++){const u=x/N,v=y/N,i=y*N+x;
-  const c=fbm(u,v,3,3,5,11),s=fbm(u,v,4,10,4,23),f=fbm(u,v,12,12,3,5);
-  const g=(.9+.15*(c-.5)+.06*(s-.5))*255;A[i*4]=A[i*4+1]=A[i*4+2]=g;A[i*4+3]=255;H[i]=.55*s+.25*c+.2*f;}}
 function genStucco(A,H,N){for(let y=0;y<N;y++)for(let x=0;x<N;x++){const u=x/N,v=y/N,i=y*N+x;
   const a=fbm(u,v,12,12,3,31),b=vnoise(u*128,v*128,128,128,37),c=vnoise(u*48,v*48,48,48,39);
   const g=(.9+.1*(a-.5)+.08*(b-.5))*255;A[i*4]=A[i*4+1]=A[i*4+2]=g;A[i*4+3]=255;H[i]=.35*a+.4*b*b+.25*c;}}
-function genMicro(A,H,N){for(let y=0;y<N;y++)for(let x=0;x<N;x++){const u=x/N,v=y/N,i=y*N+x;
-  const c=fbm(u,v,2,2,6,41),m=fbm(u,v,7,7,3,43);
-  const g=(.8+.4*(c-.5)+.08*(m-.5))*255;A[i*4]=A[i*4+1]=A[i*4+2]=g;A[i*4+3]=255;H[i]=.15*m+.1*c;}
-  const R=rng(7);for(let k=0;k<1100;k++){const cx=(R()*N)|0,cy=(R()*N)|0,r=.8+R()*1.7;
-    for(let dy=-3;dy<=3;dy++)for(let dx=-3;dx<=3;dx++){const d=Math.hypot(dx,dy);if(d>=r)continue;const t=1-d/r;const i=((cy+dy+N)%N)*N+((cx+dx+N)%N);
-      H[i]-=.06*t;const m=1-.28*t;A[i*4]*=m;A[i*4+1]*=m;A[i*4+2]*=m;}}}
 function genLinen(A,H,N){const P=8;for(let y=0;y<N;y++)for(let x=0;x<N;x++){const u=x/N,v=y/N,i=y*N+x;
   const cx=(x/P)|0,cy=(y/P)|0,wf=.75+.5*hash2(cx,0,51),ef=.75+.5*hash2(0,cy,53);
   const wa=Math.sin(Math.PI*((x%P)+.5)/P)*wf,we=Math.sin(Math.PI*((y%P)+.5)/P)*ef;
@@ -337,14 +336,6 @@ function genDeco(A,H,N){const P=128;for(let y=0;y<N;y++)for(let x=0;x<N;x++){con
   const pn=fbm(u,v,24,24,3,101),paper=(.95+.05*(pn-.5))*255,gn=.85+.3*fbm(u,v,32,32,2,103);
   A[i*4]=paper*(1-gold)+194*gn*gold;A[i*4+1]=paper*(1-gold)+158*gn*gold;A[i*4+2]=paper*(1-gold)+86*gn*gold;A[i*4+3]=(1-gold)*255;
   H[i]=.3+.5*gold+.03*pn;}}
-function genBrick(A,H,N){const RH=64,BW=128,M=3.5;const PAL=[[148,68,48],[162,80,56],[134,60,44],[172,94,68],[120,56,42],[156,74,50],[140,84,62]];
-  for(let y=0;y<N;y++)for(let x=0;x<N;x++){const u=x/N,v=y/N,i=y*N+x;
-  const r=(y/RH)|0,yi=y%RH,xs=(x+(r&1)*64)%N,b=(xs/BW)|0,xi=xs%BW,id=r*4+b;
-  const d=Math.min(xi,BW-xi,yi,RH-yi)-M;const n=fbm(u,v,16,16,4,61),sp=vnoise(u*96,v*96,96,96,63);
-  if(d<0){const t=.85+.3*n;A[i*4]=176*t;A[i*4+1]=170*t;A[i*4+2]=158*t;H[i]=.15+.1*n;}
-  else{const c=PAL[(hash2(id,1,65)*PAL.length)|0],t=(.88+.22*hash2(id,2,67))*(.78+.42*n)*(sp>.8?.84:1)*(.86+.14*smooth(0,6,d));
-    A[i*4]=c[0]*t;A[i*4+1]=c[1]*t;A[i*4+2]=c[2]*t;H[i]=.55+.4*smooth(0,4,d)+.12*(n-.5);}
-  A[i*4+3]=0;}}
 function genWood(A,H,N){const S=64;for(let y=0;y<N;y++)for(let x=0;x<N;x++){const u=x/N,v=y/N,i=y*N+x;
   const xi=x%S,s=(x/S)|0,tone=.88+.22*hash2(s,3,71);
   const g1=fbm(u,v,48,3,4,70+s*3),ring=Math.sin(((xi/S)*3+4*fbm(u,v,6,2,3,80+s))*Math.PI*5);
@@ -352,26 +343,22 @@ function genWood(A,H,N){const S=64;for(let y=0;y<N;y++)for(let x=0;x<N;x++){cons
   if(gd<2){A[i*4]=66;A[i*4+1]=47;A[i*4+2]=32;H[i]=.05;}
   else{const l=(.8+.08*ring+.22*(g1-.5))*tone;A[i*4]=182*l;A[i*4+1]=136*l;A[i*4+2]=92*l;H[i]=.8+.2*smooth(1,5,gd)+.04*(g1-.5);}
   A[i*4+3]=0;}}
-function genStone(A,H,N){const BW=256,BH=128,J=2.5;for(let y=0;y<N;y++)for(let x=0;x<N;x++){const u=x/N,v=y/N,i=y*N+x;
-  const r=(y/BH)|0,xs=(x+(r&1)*128)%N,bx=(xs/BW)|0,xi=xs%BW,yi=y%BH,id=r*2+bx;
-  const d=Math.min(xi,BW-xi,yi,BH-yi)-J,band=fbm(u,v,2,14,5,90),n=fbm(u,v,16,16,3,95),tone=.92+.12*hash2(id,1,97);
-  if(d<0){A[i*4]=184;A[i*4+1]=176;A[i*4+2]=162;H[i]=.2;}
-  else{const l=(.86+.4*(band-.5)+.06*(n-.5))*tone;A[i*4]=216*l;A[i*4+1]=202*l;A[i*4+2]=178*l;H[i]=.7+.25*smooth(0,3,d)+.05*(n-.5);}
-  A[i*4+3]=0;}
-  const R=rng(9);for(let k=0;k<520;k++){const cx=(R()*N)|0,cy=(R()*N)|0,rx=1.5+R()*4.5,ry=.8+R()*1.4;
-    for(let dy=-3;dy<=3;dy++)for(let dx=-7;dx<=7;dx++){const d=Math.hypot(dx/rx,dy/ry);if(d>=1)continue;const t=1-d;const i=((cy+dy+N)%N)*N+((cx+dx+N)%N);
-      H[i]-=.35*t;const m=1-.3*t;A[i*4]*=m;A[i*4+1]*=m;A[i*4+2]*=m;}}}
-
+// Scanned materials (Poly Haven, CC0) carry their real size; drawn ones are generated in the page.
+const WALL_H=2.6; // metres from floor to ceiling, used to show scanned textures at true scale
 const TEX=[
-  {id:'plaster',name:'Lime plaster',tint:true,tiles:2,target:.16,gen:genPlaster},
-  {id:'stucco',name:'Sand stucco',tint:true,tiles:5,target:.55,gen:genStucco},
-  {id:'micro',name:'Microcement',tint:true,tiles:2,target:.3,gen:genMicro},
-  {id:'linen',name:'Linen weave',tint:true,tiles:6,target:.5,gen:genLinen},
-  {id:'deco',name:'Deco wallpaper',tint:true,tiles:3,target:.4,gen:genDeco},
-  {id:'brick',name:'Brick',tint:false,tiles:4,target:.85,gen:genBrick},
-  {id:'wood',name:'Oak slats',tint:false,tiles:3,target:.55,gen:genWood},
-  {id:'stone',name:'Travertine',tint:false,tiles:2,target:.45,gen:genStone}
+  {id:'plaster',name:'Lime plaster',scan:true,tint:true,sizeM:1,mean:.132,rough:.75,vary:.5},
+  {id:'micro',name:'Microcement',scan:true,tint:true,sizeM:1.5,mean:.0871,rough:.5,vary:.75},
+  {id:'stucco',name:'Sand stucco',tint:true,tiles:5,target:.55,rough:.9,gen:genStucco},
+  {id:'linen',name:'Linen weave',tint:true,tiles:6,target:.5,rough:.9,gen:genLinen},
+  {id:'deco',name:'Deco wallpaper',tint:true,tiles:3,target:.4,rough:.6,gen:genDeco},
+  {id:'redbrick',name:'Red brick',scan:true,tint:false,sizeM:1,mean:.0688,rough:.85},
+  {id:'oldbrick',name:'Reclaimed brick',scan:true,tint:false,sizeM:3,mean:.0744,rough:.85},
+  {id:'planks',name:'Weathered planks',scan:true,tint:false,sizeM:1,mean:.1125,rough:.8},
+  {id:'wood',name:'Oak slats',tint:false,tiles:3,target:.55,rough:.6,gen:genWood},
+  {id:'sandstone',name:'Sandstone',scan:true,tint:false,sizeM:3,mean:.3025,rough:.85},
+  {id:'limestone',name:'Limestone tiles',scan:true,tint:false,sizeM:1.5,mean:.3321,rough:.45}
 ];
+TEX.forEach(t=>{if(t.scan)t.tiles=WALL_H/t.sizeM;});
 const TEXMAP={};TEX.forEach(t=>TEXMAP[t.id]=t);
 
 function heightToNormal(h,N,target){
@@ -391,7 +378,17 @@ function finishTex(def,A,H){
   def.mean=n?s/n:s2/(TS*TS);
   def.albTex=mkRepeatTex(A);def.nrmTex=mkRepeatTex(def.nrm);def.ready=true;
 }
-function ensureTex(def){if(def.ready)return;const A=new Uint8ClampedArray(TS*TS*4),H=new Float32Array(TS*TS);def.gen(A,H,TS);finishTex(def,A,H);}
+function ensureTex(def){
+  if(def.ready)return Promise.resolve();
+  if(!def.scan){const A=new Uint8ClampedArray(TS*TS*4),H=new Float32Array(TS*TS);def.gen(A,H,TS);finishTex(def,A,H);return Promise.resolve();}
+  if(def.loading)return def.loading;
+  const img=u=>new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>rej(new Error('texture '+u));i.src=u;});
+  const t0=performance.now();
+  def.loading=Promise.all([img('tex/'+def.id+'_c.jpg'),img('tex/'+def.id+'_n.jpg')]).then(([c,n])=>{
+    def.albTex=mkRepeatTex(c);def.nrmTex=mkRepeatTex(n);def.ready=true;log('texture '+def.id+' in '+Math.round(performance.now()-t0)+' ms');requestRender();refreshWallChips();
+  }).catch(e=>{def.loading=null;log('texture failed '+def.id);toast('The '+def.name.toLowerCase()+' texture couldn\'t load. Check your connection and try again.');});
+  return def.loading;
+}
 
 /* ---------- WebGL ---------- */
 const glc=$('#gl'),ov=$('#ov'),og=ov.getContext('2d');
@@ -407,30 +404,42 @@ precision highp float;
 precision mediump float;
 #endif
 varying vec2 vUv;
-uniform sampler2D uPhoto,uMask,uAlb,uNrm;
+uniform sampler2D uPhoto,uMask,uAlb,uNrm,uBlur;
 uniform mat3 uInv;
 uniform vec2 uTiles,uTexel;
-uniform float uKind,uTintMix,uAlbMean,uDepth,uMeanLum,uHi;
-uniform vec3 uTint,uLight;
+uniform float uKind,uTintMix,uAlphaTint,uAlbMean,uDepth,uMeanLum,uHi,uPacked,uRough,uSheen,uCast,uVary;
+uniform vec3 uTint,uLight,uWallMean;
 vec3 lin(vec3 c){return pow(c,vec3(2.2));}
 float luma(vec3 c){return dot(c,vec3(.2126,.7152,.0722));}
 void main(){
   float m=texture2D(uMask,vUv).r*.4+(texture2D(uMask,vUv+vec2(uTexel.x,0.)).r+texture2D(uMask,vUv-vec2(uTexel.x,0.)).r+texture2D(uMask,vUv+vec2(0.,uTexel.y)).r+texture2D(uMask,vUv-vec2(0.,uTexel.y)).r)*.15;
   vec3 ph=lin(texture2D(uPhoto,vUv).rgb);
   float shade=clamp(luma(ph)/uMeanLum,0.,3.);
-  vec3 base=uTint;
+  // colour of the light falling here (warm lamp, cool window), measured against the wall's average colour
+  vec3 bl=lin(texture2D(uBlur,vUv).rgb);
+  vec3 lc=clamp((bl/max(luma(bl),1e-4))/(uWallMean/max(luma(uWallMean),1e-4)),.6,1.6);
+  lc=mix(vec3(1.),lc,uCast);
+  vec3 base=uTint;float rough=uRough;vec3 n=vec3(0.,0.,1.);
   if(uKind>.5){
     vec3 q=uInv*vec3(vUv,1.);
     vec2 t=(q.xy/q.z)*uTiles;
     vec4 a=texture2D(uAlb,t);
     vec3 al=lin(a.rgb);
-    float tm=clamp(a.a+uTintMix,0.,1.);
-    base=mix(al,uTint*(luma(al)/uAlbMean),tm);
-    vec3 n=texture2D(uNrm,t).rgb*2.-1.;
-    n=normalize(vec3(n.xy*uDepth,max(n.z,.05)));
+    float tm=clamp(uAlphaTint*a.a+uTintMix,0.,1.);
+    base=mix(al,uTint*mix(1.,luma(al)/uAlbMean,uVary),tm);
+    vec4 nr=texture2D(uNrm,t);
+    vec2 nxy=nr.xy*2.-1.;
+    if(uPacked>.5){rough=nr.b;n=vec3(nxy*uDepth,sqrt(max(1.-dot(nxy,nxy),.0025)));}
+    else n=vec3(nxy*uDepth,max(nr.b*2.-1.,.05));
+    n=normalize(n);
     base*=max(dot(n,uLight),0.)/max(uLight.z,.2);
   }
-  vec3 col=mix(base*shade,vec3(.16,.28,.82),uHi);
+  // bright spots already in the photo (window glare, lamp hot spots): matt paint softens them, gloss keeps them
+  float hi=max(shade-1.15,0.);
+  vec3 col=base*(shade-hi*.55*(1.-uSheen))*lc;
+  col+=vec3(hi*.22*uSheen);
+  if(uKind>.5){float g=uSheen*(1.-rough*.75);vec3 r=reflect(-uLight,n);col+=vec3(pow(max(r.z,0.),mix(6.,70.,g))*g*.16*max(shade,.35));}
+  col=mix(col,vec3(.16,.28,.82),uHi);
   gl_FragColor=vec4(pow(clamp(col,0.,1.),vec3(1./2.2)),m);
 }`;
 function prog(fs){
@@ -446,7 +455,7 @@ function mkTex(){const t=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,t);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);return t;}
 function mkRepeatTex(data){const t=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,t);
-  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,TS,TS,0,gl.RGBA,gl.UNSIGNED_BYTE,data);gl.generateMipmap(gl.TEXTURE_2D);
+  if(data instanceof HTMLImageElement)gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,data);else gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,TS,TS,0,gl.RGBA,gl.UNSIGNED_BYTE,data);gl.generateMipmap(gl.TEXTURE_2D);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.REPEAT);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.REPEAT);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
   if(aniso)gl.texParameterf(gl.TEXTURE_2D,aniso.TEXTURE_MAX_ANISOTROPY_EXT,Math.min(8,gl.getParameter(aniso.MAX_TEXTURE_MAX_ANISOTROPY_EXT)));return t;}
@@ -454,7 +463,7 @@ const dummy=mkTex();gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIG
 const bindTex=(unit,t)=>{gl.activeTexture(gl.TEXTURE0+unit);gl.bindTexture(gl.TEXTURE_2D,t);};
 
 /* ---------- State ---------- */
-const S={W:0,H:0,photoTex:null,walls:[],sel:-1,mode:'tap',tol:14,brush:26,finish:{kind:'colour',color:'#A8B5A0',tex:'plaster',size:1,depth:1,tint:false},undo:[],before:false,flash:null,raf:0,userTex:0,photoId:0,photoCanvas:null,aiWall:null,aiLab:null,aiCanvas:null,aiFlash:0};
+const S={W:0,H:0,photoTex:null,walls:[],sel:-1,mode:'tap',tol:14,brush:26,finish:{kind:'colour',color:'#A8B5A0',tex:'plaster',size:1,depth:1,tint:false,sheen:0},undo:[],before:false,flash:null,raf:0,userTex:0,photoId:0,photoCanvas:null,aiWall:null,aiLab:null,aiCanvas:null,aiFlash:0};
 const maskCache=new Map();
 const selWall=()=>S.walls[S.sel]||null;
 const curFinish=()=>{const w=LIVE.on?null:selWall();return w?w.finish:S.finish;};
@@ -522,12 +531,13 @@ const maskKey=w=>JSON.stringify([w.seeds,w.strokes]);
 function buildMask(w){
   const key=maskKey(w);
   if(w._key!==key||!w._mask){
-    let m=maskCache.get(key);
-    if(!m){m=new Uint8Array(S.W*S.H);for(const s of w.seeds)flood(m,s.x,s.y,s.tol);for(const s of w.strokes)applyStroke(m,s);
-      maskCache.set(key,m);if(maskCache.size>24)maskCache.delete(maskCache.keys().next().value);}
-    w._mask=m;w._key=key;
+    let c=maskCache.get(key);
+    if(!c){const m=new Uint8Array(S.W*S.H);for(const s of w.seeds)flood(m,s.x,s.y,s.tol);
+      const fm=S.depth?m.slice():null,plane=S.depth?planeRefine(m,w.seeds):null;if(plane)snapMask(m,fm);for(const s of w.strokes)applyStroke(m,s);
+      c={m,plane};maskCache.set(key,c);if(maskCache.size>24)maskCache.delete(maskCache.keys().next().value);}
+    w._mask=c.m;w._plane=c.plane;w._key=key;
   }
-  stats(w);if(w.quadAuto||!w.quad)w.quad=autoQuad(w);geom(w);uploadMask(w);
+  stats(w);if(w.quadAuto||!w.quad)w.quad=(w._plane&&depthQuad(w))||autoQuad(w);geom(w);uploadMask(w);
 }
 function uploadMask(w){if(!w._maskTex)w._maskTex=mkTex();else gl.bindTexture(gl.TEXTURE_2D,w._maskTex);
   gl.texImage2D(gl.TEXTURE_2D,0,gl.LUMINANCE,S.W,S.H,0,gl.LUMINANCE,gl.UNSIGNED_BYTE,w._mask);}
@@ -538,6 +548,8 @@ function stats(w){
   w._area=n;
   if(!n){w._meanLum=.5;w._light=[-.5,-.6,.62];w._bb={x0:0,y0:0,x1:W-1,y1:H-1};return;}
   w._meanLum=Math.max(sum/n,1e-3);w._bb={x0,y0,x1,y1};
+  let r=0,g=0,b=0,k=0;const d=S.rgba,st=Math.max(1,Math.floor(n/40000));for(let i=0,c=0;i<W*H;i++)if(m[i]>127&&(c++%st===0)){r+=LIN[d[i*4]];g+=LIN[d[i*4+1]];b+=LIN[d[i*4+2]];k++;}
+  w._meanRGB=[r/k,g/k,b/k];
   const dx=lx/sum-cx/n,dy=ly/sum-cy/n,sc=Math.max(x1-x0,y1-y0,1);
   const ang=Math.hypot(dx,dy)/sc>.004?Math.atan2(dy,dx):Math.atan2(-.8,-.6);
   const L=[Math.cos(ang)*.8,Math.sin(ang)*.8,.62],l=Math.hypot(L[0],L[1],L[2]);w._light=L.map(v=>v/l);
@@ -603,7 +615,8 @@ function render(){
   let again=false;
   if(!S.before){
     gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.useProgram(PW.p);const u=PW.u;
-    gl.uniform1i(u.uPhoto,0);gl.uniform1i(u.uMask,1);gl.uniform1i(u.uAlb,2);gl.uniform1i(u.uNrm,3);gl.uniform2f(u.uTexel,1/S.W,1/S.H);
+    gl.uniform1i(u.uPhoto,0);gl.uniform1i(u.uMask,1);gl.uniform1i(u.uAlb,2);gl.uniform1i(u.uNrm,3);gl.uniform1i(u.uBlur,4);gl.uniform2f(u.uTexel,1/S.W,1/S.H);
+    bindTex(4,S.blurTex||dummy);gl.uniform1f(u.uCast,S.blurTex?.85:0);
     const now=performance.now();
     for(const w of S.walls){
       if(!w._maskTex||!w._geom)continue;const f=w.finish,def=TEXMAP[f.tex],isTex=f.kind==='texture'&&def&&def.ready;
@@ -611,7 +624,9 @@ function render(){
       gl.uniformMatrix3fv(u.uInv,false,w._geom.inv);
       const tiles=(isTex?def.tiles:1)/(f.size||1);gl.uniform2f(u.uTiles,tiles*w._geom.aspect,tiles);
       gl.uniform1f(u.uKind,isTex?1:0);const t=hexLin(f.color);gl.uniform3f(u.uTint,t[0],t[1],t[2]);
-      gl.uniform1f(u.uTintMix,isTex&&!def.tint&&f.tint?1:0);gl.uniform1f(u.uAlbMean,isTex?def.mean:1);gl.uniform1f(u.uDepth,f.depth);
+      gl.uniform1f(u.uTintMix,!isTex?0:def.scan?(def.tint||f.tint?1:0):(!def.tint&&f.tint?1:0));gl.uniform1f(u.uAlphaTint,isTex&&!def.scan?1:0);
+      gl.uniform1f(u.uPacked,isTex&&def.scan?1:0);gl.uniform1f(u.uRough,isTex?def.rough||.8:.9);gl.uniform1f(u.uSheen,f.sheen||0);gl.uniform1f(u.uVary,isTex&&def.vary?def.vary:1);
+      gl.uniform1f(u.uAlbMean,isTex?def.mean:1);gl.uniform1f(u.uDepth,f.depth);gl.uniform3fv(u.uWallMean,w._meanRGB||[1,1,1]);
       gl.uniform3f(u.uLight,w._light[0],w._light[1],w._light[2]);gl.uniform1f(u.uMeanLum,w._meanLum);
       let hi=0;if(S.flash&&S.flash.w===w){const k=(now-S.flash.t)/650;if(k<1){hi=.4*(1-k);again=true;}else S.flash=null;}
       gl.uniform1f(u.uHi,hi);gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
@@ -679,11 +694,11 @@ function addWall(p){
   if(S.walls.length>=4){toast('You can paint up to 4 walls. Remove one to add another.');return;}
   const w={seeds:[{x:Math.round(p.x),y:Math.round(p.y),tol:S.tol}],strokes:[],quad:null,quadAuto:true,finish:Object.assign({},S.finish)};
   work(()=>{
-    buildMask(w);
+    const t0=performance.now();buildMask(w);w._ms=Math.round(performance.now()-t0);
     if(w._area<S.W*S.H*.002){if(w._maskTex)gl.deleteTexture(w._maskTex);toast('That spot is too small or busy. Tap a plain part of the wall.');return;}
     pushUndo();S.walls.push(w);S.sel=S.walls.length-1;S.flash={w,t:performance.now()};
     const i0=Math.round(p.y)*S.W+Math.round(p.x),what=S.aiWall&&S.aiWall[i0]<60?aiLabelAt(p.x,p.y):'';
-    log('tap wall at '+Math.round(p.x)+','+Math.round(p.y)+' area '+(100*w._area/(S.W*S.H)).toFixed(1)+'% ai '+(S.aiWall?S.aiWall[i0]:'-')+(what?' label '+what:''));
+    log('tap wall at '+Math.round(p.x)+','+Math.round(p.y)+' area '+(100*w._area/(S.W*S.H)).toFixed(1)+'% ai '+(S.aiWall?S.aiWall[i0]:'-')+(what?' label '+what:'')+(w._plane?' planes '+w._plane.planes+' cut '+w._plane.cutPct+'%':'')+' in '+w._ms+' ms');
     if(what&&what!=='wall')toast('The AI thinks this is the '+what+', not a wall. It\'s painted anyway. Press Undo if that was a mistake.');
     else if(w._area>S.W*S.H*.62)toast('That covers most of the photo. If paint spilled onto the floor or ceiling, use Fix edges.');
     else toast('Wall '+S.walls.length+' added. Now pick a colour or texture.');
@@ -711,7 +726,7 @@ function endPointer(e,cancel){
   if(LIVE.on){if(down&&!down.moved&&!cancel)liveTap(toImg(e));down=null;return;}
   const w=selWall();
   if(drag){drag=null;if(w)geom(w);}
-  else if(stroke){if(w){w.strokes.push(stroke);w._key=maskKey(w);maskCache.set(w._key,w._mask);stats(w);geom(w);}stroke=null;}
+  else if(stroke){if(w){w.strokes.push(stroke);w._key=maskKey(w);maskCache.set(w._key,{m:w._mask,plane:w._plane});stats(w);geom(w);}stroke=null;}
   else if(down&&!down.moved&&!cancel)onTap(toImg(e));
   down=null;ui();requestRender();
 }
@@ -727,7 +742,9 @@ function onTap(p){
 function setPhoto(src,sw,sh,isSample){
   const MAX=1400,s=Math.min(1,MAX/Math.max(sw,sh));S.W=Math.round(sw*s);S.H=Math.round(sh*s);
   const c=document.createElement('canvas');c.width=S.W;c.height=S.H;const g=c.getContext('2d');g.imageSmoothingQuality='high';g.drawImage(src,0,0,S.W,S.H);
-  analyse(g.getImageData(0,0,S.W,S.H).data);S.photoCanvas=c;S.photoId++;S.aiWall=null;S.aiLab=null;S.aiCanvas=null;S.aiFlash=0;
+  S.rgba=g.getImageData(0,0,S.W,S.H).data;analyse(S.rgba);S.photoCanvas=c;
+  const bc=document.createElement('canvas');bc.width=Math.max(8,Math.round(S.W/14));bc.height=Math.max(8,Math.round(S.H/14));const bg=bc.getContext('2d');bg.imageSmoothingQuality='high';bg.drawImage(c,0,0,bc.width,bc.height);
+  if(!S.blurTex)S.blurTex=mkTex();else gl.bindTexture(gl.TEXTURE_2D,S.blurTex);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,bc);S.photoId++;S.aiWall=null;S.aiLab=null;S.aiCanvas=null;S.aiFlash=0;S.depth=null;S.depthLow=null;S.floorP=null;
   if(!S.photoTex)S.photoTex=mkTex();else gl.bindTexture(gl.TEXTURE_2D,S.photoTex);
   gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,c);
   glc.width=ov.width=S.W;glc.height=ov.height=S.H;
@@ -746,29 +763,179 @@ $('#fileIn').addEventListener('change',e=>{loadFile(e.target.files[0]);e.target.
 $('#sampleBtn').addEventListener('click',()=>work(loadSample,'Setting up the sample…'));
 if(!matchMedia('(pointer:coarse)').matches)$('#camLbl').hidden=true;
 
+/* ---------- Depth: split walls into flat surfaces (planes) ----------
+   Depth Anything V2 gives relative inverse depth ("disparity"). On any flat surface disparity is a linear function of the
+   image position, d = A·x' + B·y' + C (x', y' = pixel offset from the image centre divided by the focal length).
+   So a tapped wall is one plane: things in front of it (a cabinet, a sofa back) sit above that plane, and the floor or the
+   next wall round a corner fit a different plane. Both get cut away. */
+const FOCAL=.78; // focal length as a share of the photo's long side (typical phone main camera)
+function camK(){const f=FOCAL*Math.max(S.W,S.H);return{f,cx:S.W/2,cy:S.H/2};}
+function solve3(m,v){ // 3x3 linear system, Cramer's rule
+  const det=(a)=>a[0]*(a[4]*a[8]-a[5]*a[7])-a[1]*(a[3]*a[8]-a[5]*a[6])+a[2]*(a[3]*a[7]-a[4]*a[6]);
+  const D=det(m);if(Math.abs(D)<1e-12)return null;
+  const r=[];for(let c=0;c<3;c++){const t=m.slice();t[c]=v[0];t[3+c]=v[1];t[6+c]=v[2];r.push(det(t)/D);}return r;
+}
+function fitLS(px,py,pd,idx){ // least-squares plane through the given sample indices
+  let sxx=0,sxy=0,sx=0,syy=0,sy=0,n=0,sxd=0,syd=0,sd=0;
+  for(const i of idx){const x=px[i],y=py[i],d=pd[i];sxx+=x*x;sxy+=x*y;sx+=x;syy+=y*y;sy+=y;n++;sxd+=x*d;syd+=y*d;sd+=d;}
+  return solve3([sxx,sxy,sx,sxy,syy,sy,sx,sy,n],[sxd,syd,sd]);
+}
+function ransacPlane(px,py,pd,pool,thr,R){
+  let best=null,bestN=0;const n=pool.length;if(n<3)return null;
+  for(let it=0;it<160;it++){
+    const a=pool[(R()*n)|0],b=pool[(R()*n)|0],c=pool[(R()*n)|0];
+    const p=solve3([px[a],py[a],1,px[b],py[b],1,px[c],py[c],1],[pd[a],pd[b],pd[c]]);if(!p)continue;
+    let k=0;for(const i of pool)if(Math.abs(pd[i]-(p[0]*px[i]+p[1]*py[i]+p[2]))<thr)k++;
+    if(k>bestN){bestN=k;best=p;}
+  }
+  if(!best)return null;
+  const inl=pool.filter(i=>Math.abs(pd[i]-(best[0]*px[i]+best[1]*py[i]+best[2]))<thr);
+  return{p:fitLS(px,py,pd,inl)||best,inl};
+}
+const planeNormal=(p,t)=>{const v=[p[0],p[1],p[2]-(t||0)],l=Math.hypot(v[0],v[1],v[2])||1;return v.map(a=>a/l);};
+const angleDeg=(a,b)=>Math.acos(clamp(Math.abs(a[0]*b[0]+a[1]*b[1]+a[2]*b[2]),0,1))*180/Math.PI;
+/* Keep only the part of the flooded region that lies on the tapped wall's plane. */
+function planeRefine(m,seeds){
+  const D=S.depth;if(!D)return null;
+  const W=S.W,H=S.H,N=W*H,{f,cx,cy}=camK(),R=rng(11);
+  let area=0;for(let i=0;i<N;i++)if(m[i])area++;if(area<400)return null;
+  const step=Math.max(1,Math.floor(area/3000)),px=[],py=[],pd=[];
+  for(let i=0,c=0;i<N;i++)if(m[i]&&(c++%step===0)){const x=i%W,y=(i-x)/W;px.push((x-cx)/f);py.push((y-cy)/f);pd.push(D[i]);}
+  const thr=.022,planes=[];let pool=px.map((_,i)=>i);
+  while(planes.length<3&&pool.length>Math.max(60,px.length*.06)){
+    const r=ransacPlane(px,py,pd,pool,thr,R);if(!r||r.inl.length<Math.max(40,px.length*.06))break;
+    planes.push(r.p);const s=new Set(r.inl);pool=pool.filter(i=>!s.has(i));
+  }
+  if(!planes.length)return null;
+  // which plane is the tapped one: vote over a small window around each seed
+  const votes=planes.map(()=>0);
+  for(const sd of seeds)for(let dy=-6;dy<=6;dy+=3)for(let dx=-6;dx<=6;dx+=3){const x=clamp(Math.round(sd.x)+dx,0,W-1),y=clamp(Math.round(sd.y)+dy,0,H-1),i=y*W+x,X=(x-cx)/f,Y=(y-cy)/f;
+    let bi=0,br=1e9;planes.forEach((p,k)=>{const r=Math.abs(D[i]-(p[0]*X+p[1]*Y+p[2]));if(r<br){br=r;bi=k;}});votes[bi]++;}
+  const si=votes.indexOf(Math.max(...votes)),P=planes[si],nP=planeNormal(P);
+  const tilted=planes.map(p=>angleDeg(planeNormal(p),nP)>22);
+  let cut=0;
+  for(let i=0;i<N;i++){if(!m[i])continue;const x=i%W,y=(i-x)/W,X=(x-cx)/f,Y=(y-cy)/f,d=D[i],rs=d-(P[0]*X+P[1]*Y+P[2]);
+    let drop=rs>.05||rs<-.08;                       // well in front of the wall (furniture) or behind it (an opening)
+    if(!drop&&Math.abs(rs)>.008){let bi=si,br=Math.abs(rs);planes.forEach((p,k)=>{const r=Math.abs(d-(p[0]*X+p[1]*Y+p[2]));if(r<br-.01){br=r;bi=k;}});drop=bi!==si&&tilted[bi];} // clearly fits a differently angled surface
+    if(drop){m[i]=0;cut++;}}
+  // keep the pieces connected to the tap; drop crumbs left behind on other surfaces
+  const lbl=new Int32Array(N),st=new Int32Array(N),areas=[0];let sp=0;
+  for(let i0=0;i0<N;i0++){if(!m[i0]||lbl[i0])continue;const id=areas.length;let a=0;lbl[i0]=id;st[sp++]=i0;
+    while(sp){const i=st[--sp],x=i%W;a++;
+      if(x>0&&m[i-1]&&!lbl[i-1]){lbl[i-1]=id;st[sp++]=i-1;}if(x<W-1&&m[i+1]&&!lbl[i+1]){lbl[i+1]=id;st[sp++]=i+1;}
+      if(i>=W&&m[i-W]&&!lbl[i-W]){lbl[i-W]=id;st[sp++]=i-W;}if(i<N-W&&m[i+W]&&!lbl[i+W]){lbl[i+W]=id;st[sp++]=i+W;}}
+    areas.push(a);}
+  const keepId=new Set();for(const sd of seeds){const i=clamp(Math.round(sd.y),0,H-1)*W+clamp(Math.round(sd.x),0,W-1);if(lbl[i])keepId.add(lbl[i]);}
+  const big=Math.max(0,...[...keepId].map(k=>areas[k]));
+  for(let k=1;k<areas.length;k++)if(areas[k]>big*.3&&areas[k]>N*.01)keepId.add(k);
+  if(!keepId.size){let bk=0;for(let k=1;k<areas.length;k++)if(areas[k]>(areas[bk]||0))bk=k;keepId.add(bk);}
+  for(let i=0;i<N;i++)if(m[i]&&!keepId.has(lbl[i]))m[i]=0;
+  return{p:P,planes:planes.length,cutPct:Math.round(100*cut/area)};
+}
+/* Fast guided filter: smooths the depth-cut outline and snaps it to edges in the photo, without growing past the colour fill. */
+function boxMean(src,W,H,r,out,tmp){
+  const k=1/((2*r+1)*(2*r+1));
+  for(let y=0;y<H;y++){const o=y*W;let s=0;for(let x=-r;x<=r;x++)s+=src[o+clamp(x,0,W-1)];
+    for(let x=0;x<W;x++){tmp[o+x]=s;s+=src[o+Math.min(x+r+1,W-1)]-src[o+Math.max(x-r,0)];}}
+  for(let x=0;x<W;x++){let s=0;for(let y=-r;y<=r;y++)s+=tmp[clamp(y,0,H-1)*W+x];
+    for(let y=0;y<H;y++){out[y*W+x]=s*k;s+=tmp[Math.min(y+r+1,H-1)*W+x]-tmp[Math.max(y-r,0)*W+x];}}
+}
+function snapMask(m,fm){
+  const W=S.W,H=S.H,w=W>>1,h=H>>1,n=w*h,lab=S.lab,I=new Float32Array(n),pp=new Float32Array(n),Ip=new Float32Array(n),II=new Float32Array(n);
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){const j=y*w+x,i0=(2*y)*W+2*x,i1=i0+W;
+    const l=(lab[i0*3]+lab[(i0+1)*3]+lab[i1*3]+lab[(i1+1)*3])/400,q=((m[i0]?1:0)+(m[i0+1]?1:0)+(m[i1]?1:0)+(m[i1+1]?1:0))/4;
+    I[j]=l;pp[j]=q;Ip[j]=l*q;II[j]=l*l;}
+  const tmp=new Float32Array(n),mI=new Float32Array(n),mp=new Float32Array(n),mIp=new Float32Array(n),mII=new Float32Array(n),r=4,eps=.0012;
+  boxMean(I,w,h,r,mI,tmp);boxMean(pp,w,h,r,mp,tmp);boxMean(Ip,w,h,r,mIp,tmp);boxMean(II,w,h,r,mII,tmp);
+  for(let j=0;j<n;j++){const v=mII[j]-mI[j]*mI[j],c=mIp[j]-mI[j]*mp[j],a=c/(v+eps);Ip[j]=a;II[j]=mp[j]-a*mI[j];}
+  boxMean(Ip,w,h,r,mIp,tmp);boxMean(II,w,h,r,mII,tmp); // mean a, mean b
+  for(let y=0;y<H;y++){const fy=clamp((y+.5)/2-.5,0,h-1),y0=Math.floor(fy),y1=Math.min(h-1,y0+1),ty=fy-y0;
+    for(let x=0;x<W;x++){const i=y*W+x;if(!fm[i]){m[i]=0;continue;}
+      const fx=clamp((x+.5)/2-.5,0,w-1),x0=Math.floor(fx),x1=Math.min(w-1,x0+1),tx=fx-x0;
+      const bil=A=>(A[y0*w+x0]*(1-tx)+A[y0*w+x1]*tx)*(1-ty)+(A[y1*w+x0]*(1-tx)+A[y1*w+x1]*tx)*ty;
+      m[i]=bil(mIp)*lab[i*3]/100+bil(mII)>.5?255:0;}}
+}
+/* The relative depth has an unknown offset. Walls stand at right angles to the floor, so pick the offset that makes the
+   wall plane perpendicular to the floor plane (when the floor is visible). */
+function floorPlane(){
+  if(!S.depth||!S.aiLab)return null;const a=S.aiLab,{f,cx,cy}=camK(),px=[],py=[],pd=[];
+  for(let y=0;y<a.h;y++)for(let x=0;x<a.w;x++)if(a.lab[y*a.w+x]===3){const X=Math.round((x+.5)*S.W/a.w),Y=Math.round((y+.5)*S.H/a.h);px.push((X-cx)/f);py.push((Y-cy)/f);pd.push(S.depth[Y*S.W+X]);}
+  if(px.length<40)return null;const r=ransacPlane(px,py,pd,px.map((_,i)=>i),.02,rng(5));return r&&r.inl.length>px.length*.4?r.p:null;
+}
+function depthShift(P){
+  const F=S.floorP;if(!F)return 0;
+  const b=-(P[2]+F[2]),c=P[2]*F[2]+P[0]*F[0]+P[1]*F[1],disc=b*b-4*c;if(disc<0)return 0;
+  const r1=(-b-Math.sqrt(disc))/2,r2=(-b+Math.sqrt(disc))/2,ok=[r1,r2].filter(t=>t<-.02&&t>-3);
+  return ok.length?Math.max(...ok):0;
+}
+/* Texture angle from the wall's plane: a rectangle on the plane covering the wall, projected into the photo. */
+function depthQuad(w){
+  const P=w._plane&&w._plane.p;if(!P)return null;const {f,cx,cy}=camK(),n=planeNormal(P,depthShift(P));if(n[2]<.15)return null;
+  const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],norm=v=>{const l=Math.hypot(...v)||1;return v.map(a=>a/l);},dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+  let U=norm(cross([0,1,0],n));if(U[0]<0)U=U.map(a=>-a);let V=norm(cross(n,U));if(V[1]<0)V=V.map(a=>-a);
+  const ray=(x,y)=>[(x-cx)/f,(y-cy)/f,1],onPlane=r=>{const k=dot(n,r);return k>.02?r.map(a=>a/k):null;};
+  const bb=w._bb,X0=onPlane(ray((bb.x0+bb.x1)/2,(bb.y0+bb.y1)/2));if(!X0)return null;
+  let u0=1e9,u1=-1e9,v0=1e9,v1=-1e9;
+  for(const [x,y] of [[bb.x0,bb.y0],[bb.x1,bb.y0],[bb.x1,bb.y1],[bb.x0,bb.y1]]){const X=onPlane(ray(x,y));if(!X)return null;const d=[X[0]-X0[0],X[1]-X0[1],X[2]-X0[2]];
+    const u=dot(d,U),v=dot(d,V);u0=Math.min(u0,u);u1=Math.max(u1,u);v0=Math.min(v0,v);v1=Math.max(v1,v);}
+  const q=[];for(const [u,v] of [[u0,v0],[u1,v0],[u1,v1],[u0,v1]]){const X=[X0[0]+u*U[0]+v*V[0],X0[1]+u*U[1]+v*V[1],X0[2]+u*U[2]+v*V[2]];if(X[2]<.01)return null;q.push([f*X[0]/X[2]+cx,f*X[1]/X[2]+cy]);}
+  return q;
+}
+function upF(src,w,h){
+  const W=S.W,H=S.H,out=new Float32Array(W*H);
+  for(let y=0;y<H;y++){const fy=clamp((y+.5)*h/H-.5,0,h-1),y0=Math.floor(fy),y1=Math.min(h-1,y0+1),ty=fy-y0;
+    for(let x=0;x<W;x++){const fx=clamp((x+.5)*w/W-.5,0,w-1),x0=Math.floor(fx),x1=Math.min(w-1,x0+1),tx=fx-x0;
+      out[y*W+x]=(src[y0*w+x0]*(1-tx)+src[y0*w+x1]*tx)*(1-ty)+(src[y1*w+x0]*(1-tx)+src[y1*w+x1]*tx)*ty;}}
+  return out;
+}
+function depthInput(){
+  const L=392,a=S.W/S.H;let w,h;if(a>=1){w=L;h=Math.max(14,Math.round(L/a/14)*14);}else{h=L;w=Math.max(14,Math.round(L*a/14)*14);}
+  const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');g.imageSmoothingQuality='high';g.drawImage(S.photoCanvas,0,0,w,h);
+  const d=g.getImageData(0,0,w,h).data,n=w*h,px=new Float32Array(3*n),M=[.485,.456,.406],SD=[.229,.224,.225];
+  for(let i=0;i<n;i++){px[i]=(d[i*4]/255-M[0])/SD[0];px[n+i]=(d[i*4+1]/255-M[1])/SD[1];px[2*n+i]=(d[i*4+2]/255-M[2])/SD[2];}
+  return{px,w,h};
+}
+function depthApply(r){
+  const v=Array.from(r.d).sort((a,b)=>a-b),lo=v[(v.length*.02)|0],hi=v[(v.length*.98)|0]||lo+1,k=1/Math.max(hi-lo,1e-6);
+  const dn=new Float32Array(r.d.length);for(let i=0;i<dn.length;i++)dn[i]=(r.d[i]-lo)*k;
+  S.depth=upF(dn,r.w,r.h);S.depthLow={d:dn,w:r.w,h:r.h};S.floorP=floorPlane();maskCache.clear();
+  // re-cut walls the user already made, now that depth is known
+  S.walls.forEach(w=>{w._key=null;buildMask(w);});
+}
+
 /* ---------- AI wall finder (SegFormer-B0 trained on ADE20K, run by ONNX Runtime Web in a background thread) ---------- */
 const LABELS=["wall","building","sky","floor","tree","ceiling","road","bed","windowpane","grass","cabinet","sidewalk","person","earth","door","table","mountain","plant","curtain","chair","car","water","painting","sofa","shelf","house","sea","mirror","rug","field","armchair","seat","fence","desk","rock","wardrobe","lamp","bathtub","railing","cushion","base","box","column","signboard","chest of drawers","counter","sand","sink","skyscraper","fireplace","refrigerator","grandstand","path","stairs","runway","case","pool table","pillow","screen door","stairway","river","bridge","bookcase","blind","coffee table","toilet","flower","book","hill","bench","countertop","stove","palm","kitchen island","computer","swivel chair","boat","bar","arcade machine","hovel","bus","towel","light","truck","tower","chandelier","awning","streetlight","booth","television receiver","airplane","dirt track","apparel","pole","land","bannister","escalator","ottoman","bottle","buffet","poster","stage","van","ship","fountain","conveyer belt","canopy","washer","plaything","swimming pool","stool","barrel","basket","waterfall","tent","bag","minibike","cradle","oven","ball","food","step","tank","trade name","microwave","pot","animal","bicycle","lake","dishwasher","screen","blanket","sculpture","hood","sconce","vase","traffic light","tray","ashcan","fan","pier","crt screen","plate","monitor","bulletin board","shower","radiator","glass","clock","flag"];
 const ORT_URL='https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.3/dist/ort.wasm.min.js';
 const AI_BASE=new URL('ai/',document.baseURI).href;
-const AI={state:'loading',text:'',mode:'',loadMs:0,inferMs:0,errors:[],size:512,worker:null,core:null,reqId:0,pending:null,wallShare:0};
+const AI={state:'loading',text:'',mode:'',loadMs:0,inferMs:0,errors:[],size:512,worker:null,core:null,reqId:0,pending:null,wallShare:0,
+  depth:{state:'off',ms:0,loadMs:0,pid:0,pending:null,onload:null}};
 const errMsg=e=>String(e&&e.message||e);
 // Shared by the worker and the main-thread fallback, so it must not reference anything outside itself.
 function aiCore(ort,base){
   ort.env.wasm.numThreads=1;ort.env.wasm.simd=true;ort.env.wasm.proxy=false;ort.env.wasm.wasmPaths=base;
-  let session=null;
+  const sessions={};
+  async function bytes(spec){
+    if(spec.b64){let t='';for(const f of spec.files){const r=await fetch(base+f);if(!r.ok)throw new Error(f+' download failed ('+r.status+')');t+=await r.text();}
+      const bin=atob(t.replace(/\s+/g,''));const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return u;}
+    const r=await fetch(base+spec.files[0]);if(!r.ok)throw new Error(spec.files[0]+' download failed ('+r.status+')');return new Uint8Array(await r.arrayBuffer());
+  }
   return{
-    async load(){const t0=performance.now();const r=await fetch(base+'segformer-b0-ade.b64.txt');if(!r.ok)throw new Error('model download failed ('+r.status+')');
-      const bin=atob((await r.text()).replace(/\s+/g,''));const buf=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)buf[i]=bin.charCodeAt(i);session=await ort.InferenceSession.create(buf,{executionProviders:['wasm'],graphOptimizationLevel:'all'});return performance.now()-t0;},
-    async run(px,size){const t0=performance.now();const out=await session.run({[session.inputNames[0]]:new ort.Tensor('float32',px,[1,3,size,size])});
-      const lg=out[session.outputNames[0]],C=lg.dims[1],h=lg.dims[2],w=lg.dims[3],d=lg.data,n=h*w,pw=new Float32Array(n),lab=new Uint8Array(n);
-      for(let i=0;i<n;i++){let mx=-1e9,am=0;for(let c=0;c<C;c++){const v=d[c*n+i];if(v>mx){mx=v;am=c;}}let s=0;for(let c=0;c<C;c++)s+=Math.exp(d[c*n+i]-mx);pw[i]=Math.exp(d[i]-mx)/s;lab[i]=am;}
-      return{pw,lab,w,h,ms:performance.now()-t0};}
+    async load(name,spec){const t0=performance.now();sessions[name]=await ort.InferenceSession.create(await bytes(spec),{executionProviders:['wasm'],graphOptimizationLevel:'all'});return performance.now()-t0;},
+    async run(px,size){const s=sessions.seg,t0=performance.now();const out=await s.run({[s.inputNames[0]]:new ort.Tensor('float32',px,[1,3,size,size])});
+      const lg=out[s.outputNames[0]],C=lg.dims[1],h=lg.dims[2],w=lg.dims[3],d=lg.data,n=h*w,pw=new Float32Array(n),lab=new Uint8Array(n);
+      for(let i=0;i<n;i++){let mx=-1e9,am=0;for(let c=0;c<C;c++){const v=d[c*n+i];if(v>mx){mx=v;am=c;}}let sm=0;for(let c=0;c<C;c++)sm+=Math.exp(d[c*n+i]-mx);pw[i]=Math.exp(d[i]-mx)/sm;lab[i]=am;}
+      return{pw,lab,w,h,ms:performance.now()-t0};},
+    async depth(px,w,h){const s=sessions.depth,t0=performance.now();const out=await s.run({[s.inputNames[0]]:new ort.Tensor('float32',px,[1,3,h,w])});
+      const t=out[s.outputNames[0]],dh=t.dims[t.dims.length-2],dw=t.dims[t.dims.length-1];return{d:Float32Array.from(t.data),w:dw,h:dh,ms:performance.now()-t0};}
   };
 }
 const WORKER_SRC="importScripts('"+ORT_URL+"');\nconst aiCore="+aiCore.toString()+";\nlet core=null;\n"+
-  "onmessage=async e=>{const m=e.data;try{if(m.type==='load'){core=aiCore(self.ort,m.base);const ms=await core.load();postMessage({type:'loaded',ms});}"+
-  "else if(m.type==='run'){const r=await core.run(m.px,m.size);postMessage({type:'result',id:m.id,pw:r.pw,lab:r.lab,w:r.w,h:r.h,ms:r.ms},[r.pw.buffer,r.lab.buffer]);}}"+
-  "catch(err){postMessage({type:'error',id:m.id,stage:m.type,message:String(err&&err.message||err)});}};";
+  "onmessage=async e=>{const m=e.data;try{if(m.type==='load'){if(!core)core=aiCore(self.ort,m.base);const ms=await core.load(m.name,m.spec);postMessage({type:'loaded',name:m.name,ms});}"+
+  "else if(m.type==='run'){const r=await core.run(m.px,m.size);postMessage({type:'result',id:m.id,pw:r.pw,lab:r.lab,w:r.w,h:r.h,ms:r.ms},[r.pw.buffer,r.lab.buffer]);}"+
+  "else if(m.type==='depth'){const r=await core.depth(m.px,m.w,m.h);postMessage({type:'depthResult',id:m.id,d:r.d,w:r.w,h:r.h,ms:r.ms},[r.d.buffer]);}}"+
+  "catch(err){postMessage({type:'error',id:m.id,stage:m.type,name:m.name,message:String(err&&err.message||err)});}};";
+const SEG_SPEC={b64:true,files:['segformer-b0-ade.b64.txt']};
+const DEPTH_SPEC=IN_ARTIFACT?{b64:true,files:['depth.b64.0.txt','depth.b64.1.txt','depth.b64.2.txt']}:{files:['depth-anything-v2-small-q8.onnx']};
 function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>rej(new Error('script blocked: '+src));document.head.appendChild(s);});}
 function aiInitWorker(){return new Promise((res,rej)=>{
   let w;try{w=new Worker(URL.createObjectURL(new Blob([WORKER_SRC],{type:'text/javascript'})));}catch(e){rej(e);return;}
@@ -777,9 +944,9 @@ function aiInitWorker(){return new Promise((res,rej)=>{
   w.onmessage=e=>{const m=e.data;
     if(m.type==='loaded'){clearTimeout(to);AI.loadMs=m.ms;AI.worker=w;w.onmessage=aiOnMessage;w.onerror=ev=>{AI.errors.push('worker: '+(ev.message||'error'));log('AI worker error '+(ev.message||''));};res();}
     else if(m.type==='error'){clearTimeout(to);w.terminate();rej(new Error(m.message));}};
-  w.postMessage({type:'load',base:AI_BASE});
+  w.postMessage({type:'load',name:'seg',spec:SEG_SPEC,base:AI_BASE});
 });}
-async function aiInitMain(){if(!window.ort)await loadScript(ORT_URL);AI.core=aiCore(window.ort,AI_BASE);AI.loadMs=await AI.core.load();}
+async function aiInitMain(){if(!window.ort)await loadScript(ORT_URL);AI.core=aiCore(window.ort,AI_BASE);AI.loadMs=await AI.core.load('seg',SEG_SPEC);}
 function aiSetState(st,txt){AI.state=st;AI.text=txt;uiAI();}
 async function aiInit(){
   aiSetState('loading','Loading the AI wall finder…');log('AI: loading');
@@ -790,6 +957,31 @@ async function aiInit(){
   log('AI loaded ('+AI.mode+') in '+Math.round(AI.loadMs)+' ms');
   aiSetState('ready','AI wall finder ready');
   if(S.W)aiAnalyse();
+}
+function aiText(){
+  const seg=AI.wallShare<.03?'The AI found no walls in this photo. Tap one yourself.':'AI found the walls in '+(AI.inferMs/1000).toFixed(1)+' s';
+  const dp=AI.depth.state==='done'&&!S.isSample?' · depth '+(AI.depth.ms/1000).toFixed(1)+' s':AI.depth.state==='loading'?' · loading depth…':AI.depth.state==='running'?' · measuring depth…':'';
+  return seg+dp;
+}
+/* Depth runs after the wall finder, in the same background thread. It downloads on first use (27 MB). */
+function depthLoad(){
+  if(AI.depth.state!=='off')return;AI.depth.state='loading';aiSetState(AI.state,aiText());log('depth: loading');
+  const ok=ms=>{AI.depth.loadMs=ms;AI.depth.state='ready';log('depth loaded in '+Math.round(ms)+' ms');depthRun();};
+  const bad=m=>{AI.depth.state='failed';AI.errors.push('depth load: '+m);log('depth load failed: '+m);aiSetState(AI.state,aiText());};
+  if(AI.worker){AI.depth.onload={ok,bad};AI.worker.postMessage({type:'load',name:'depth',spec:DEPTH_SPEC,base:AI_BASE});}
+  else AI.core.load('depth',DEPTH_SPEC).then(ok,e=>bad(errMsg(e)));
+}
+function depthRun(){
+  if(AI.depth.state!=='ready'&&AI.depth.state!=='done')return;if(!S.photoCanvas||AI.depth.pid===S.photoId)return;
+  if(S.isSample){AI.depth.state='ready';aiSetState(AI.state,aiText());return;} // the drawn sample is not a photo; depth is for real rooms
+  const pid=S.photoId,{px,w,h}=depthInput();AI.depth.state='running';aiSetState(AI.state,aiText());
+  const done=r=>{if(pid!==S.photoId){AI.depth.state='ready';depthRun();return;}
+    AI.depth.ms=r.ms;AI.depth.pid=pid;AI.depth.state='done';depthApply(r);
+    log('depth '+r.w+'x'+r.h+' in '+Math.round(r.ms)+' ms; floor plane '+(S.floorP?'found':'not found'));
+    aiSetState(AI.state,aiText());requestRender();ui();};
+  const fail=m=>{AI.depth.state='failed';AI.errors.push('depth run: '+m);log('depth run failed: '+m);aiSetState(AI.state,aiText());};
+  if(AI.worker){const id=++AI.reqId;AI.depth.pending={id,done,fail};AI.worker.postMessage({type:'depth',id,px,w,h},[px.buffer]);}
+  else AI.core.depth(px,w,h).then(done,e=>fail(errMsg(e)));
 }
 function aiInput(){
   const n=AI.size,c=document.createElement('canvas');c.width=c.height=n;const g=c.getContext('2d');g.imageSmoothingQuality='high';g.drawImage(S.photoCanvas,0,0,n,n);
@@ -816,15 +1008,19 @@ function aiAnalyse(){
     for(let i=0;i<r.pw.length;i++){const a=r.pw[i]>.5?(r.pw[i]-.5)*2:0;im.data[i*4]=70;im.data[i*4+1]=125;im.data[i*4+2]=255;im.data[i*4+3]=a*150;}
     g.putImageData(im,0,0);S.aiCanvas=c;S.aiFlash=performance.now();
     log('AI result in '+Math.round(r.ms)+' ms, wall share '+Math.round(AI.wallShare*100)+'%');
-    if(AI.wallShare<.03){aiSetState('done','The AI found no walls in this photo. Tap one yourself.');}
-    else{aiSetState('done','AI found the walls in '+(r.ms/1000).toFixed(1)+' s');if(!S.isSample||S.walls.length===0)toast('AI found the walls (shown in blue). Tap one, or press Find walls for me.');}
+    aiSetState('done',aiText());
+    if(AI.wallShare>=.03&&(!S.isSample||S.walls.length===0))toast('AI found the walls (shown in blue). Tap one, or press Find walls for me.');
     requestRender();ui();
+    if(AI.depth.state==='off')depthLoad();else depthRun();
   };
   const fail=m=>{AI.errors.push('run: '+m);log('AI run failed: '+m);aiSetState('failed','The AI couldn\'t read this photo, so walls are found by colour and edges.');};
   if(AI.worker){const id=++AI.reqId;AI.pending={id,done,fail};AI.worker.postMessage({type:'run',id,px,size:AI.size},[px.buffer]);}
   else AI.core.run(px,AI.size).then(done,e=>fail(errMsg(e)));
 }
-function aiOnMessage(e){const m=e.data,p=AI.pending;if(!p||m.id!==p.id)return;AI.pending=null;if(m.type==='result')p.done(m);else p.fail(m.message);}
+function aiOnMessage(e){const m=e.data;
+  if(m.name==='depth'&&(m.type==='loaded'||(m.type==='error'&&m.stage==='load'))){const o=AI.depth.onload;AI.depth.onload=null;if(o){if(m.type==='loaded')o.ok(m.ms);else o.bad(m.message);}return;}
+  if(m.type==='depthResult'||(m.type==='error'&&m.stage==='depth')){const q=AI.depth.pending;if(!q||m.id!==q.id)return;AI.depth.pending=null;if(m.type==='depthResult')q.done(m);else q.fail(m.message);return;}
+  const p=AI.pending;if(!p||m.id!==p.id)return;AI.pending=null;if(m.type==='result')p.done(m);else p.fail(m.message);}
 function aiLabelAt(x,y){if(!S.aiLab)return '';const a=S.aiLab,lx=clamp(Math.floor(x/S.W*a.w),0,a.w-1),ly=clamp(Math.floor(y/S.H*a.h),0,a.h-1);return LABELS[a.lab[ly*a.w+lx]]||'';}
 function uiAI(){
   const box=$('#aiBox');box.dataset.state=AI.state;$('#aiText').textContent=AI.text;
@@ -871,7 +1067,8 @@ $('#testBtn').addEventListener('click',async()=>{
     screen:screen.width+'x'+screen.height+' @'+(window.devicePixelRatio||1)+'x',viewport:innerWidth+'x'+innerHeight,touch:matchMedia('(pointer:coarse)').matches,
     memoryGB:navigator.deviceMemory||null,cores:navigator.hardwareConcurrency||null,webgl:glInfo(),
     photo:{size:S.W+'x'+S.H,sample:!!S.isSample,walls:S.walls.length,finishes:S.walls.map(w=>w.finish.kind==='texture'?w.finish.tex:w.finish.color)},
-    ai:{state:AI.state,text:AI.text,mode:AI.mode,loadMs:Math.round(AI.loadMs),inferMs:Math.round(AI.inferMs),wallSharePct:Math.round(AI.wallShare*100),errors:AI.errors.slice(-10)},
+    ai:{state:AI.state,text:AI.text,mode:AI.mode,loadMs:Math.round(AI.loadMs),inferMs:Math.round(AI.inferMs),wallSharePct:Math.round(AI.wallShare*100),errors:AI.errors.slice(-10),
+      depth:{state:AI.depth.state,loadMs:Math.round(AI.depth.loadMs),ms:Math.round(AI.depth.ms),floor:!!S.floorP,walls:S.walls.map(w=>w._plane?{planes:w._plane.planes,cutPct:w._plane.cutPct}:null)}},
     live:{used:LIVE.used,camera:LIVE.res,fps:+LIVE.fps.toFixed(1),msPerFrame:+LIVE.procMs.toFixed(1),errors:LIVE.errors.slice(-5)},
     page:location.host||'local',log:LOG.slice(-80)};
   if(!DB){const txt=JSON.stringify(data,null,1);
@@ -984,8 +1181,12 @@ $('#texIn').addEventListener('change',e=>{addUserTexture(e.target.files[0]);e.ta
 /* ---------- Thumbnails ---------- */
 const thumbCache={},thumbBig=document.createElement('canvas'),thumbSmall=document.createElement('canvas');
 thumbBig.width=thumbBig.height=TS;thumbSmall.width=thumbSmall.height=132;
+function setTexBg(el,def,hex){
+  if(def.scan){el.style.backgroundImage='url(tex/'+def.id+'_t.jpg)';el.style.backgroundColor=def.tint?hex:'';el.style.backgroundBlendMode=def.tint?'multiply':'';return true;}
+  const u=thumb(def,hex);if(u){el.style.backgroundImage='url('+u+')';el.style.backgroundColor='';el.style.backgroundBlendMode='';}return !!u;
+}
 function thumb(def,hex){
-  if(!def.ready)return null;const key=def.id+'|'+(def.tint?hex:'');if(thumbCache[key])return thumbCache[key];
+  if(def.scan||!def.ready)return null;const key=def.id+'|'+(def.tint?hex:'');if(thumbCache[key])return thumbCache[key];
   const N=TS,a=def.alb,nr=def.nrm,img=new ImageData(N,N),o=img.data,t=hexLin(hex),Lx=-.5,Ly=-.6,Lz=.62,ln=Math.hypot(Lx,Ly,Lz);
   for(let i=0;i<N*N;i++){let r=LIN[a[i*4]],g=LIN[a[i*4+1]],b=LIN[a[i*4+2]];const m=def.tint?a[i*4+3]/255:0;
     if(m>0){const l=(.2126*r+.7152*g+.0722*b)/def.mean;r+=(t[0]*l-r)*m;g+=(t[1]*l-g)*m;b+=(t[2]*l-b)*m;}
@@ -998,7 +1199,7 @@ let thumbJob=0;
 function refreshThumbs(){
   clearTimeout(thumbJob);const hex=curFinish().color;const tiles=[...document.querySelectorAll('#textures .sw[data-id]')];let k=0;
   const step=()=>{if(k>=tiles.length){refreshWallChips();return;}const b=tiles[k++],def=TEXMAP[b.dataset.id];
-    if(!def.ready){ensureTex(def);}const u=thumb(def,hex);if(u)b.querySelector('.c').style.backgroundImage='url('+u+')';thumbJob=setTimeout(step,0);};
+    if(!def.scan&&!def.ready)ensureTex(def);setTexBg(b.querySelector('.c'),def,hex);thumbJob=setTimeout(step,0);};
   thumbJob=setTimeout(step,0);
 }
 
@@ -1032,7 +1233,7 @@ function buildTextureTiles(){
   add.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();$('#texIn').click();}});grid.appendChild(add);
   [...TEX.filter(t=>t.user).reverse(),...TEX.filter(t=>!t.user)].forEach(def=>{const b=document.createElement('button');b.type='button';b.className='sw';b.dataset.id=def.id;b.setAttribute('aria-pressed','false');
     b.innerHTML='<span class="c"></span><span class="t">'+def.name+'<small>'+(def.user?'Your photo':def.tint?'Takes your colour':'Own colour')+'</small></span>';
-    b.addEventListener('click',()=>{if(!def.ready)work(()=>ensureTex(def),'Making the texture…');applyFinish({kind:'texture',tex:def.id},true);});grid.appendChild(b);});
+    b.addEventListener('click',()=>{if(!def.scan&&!def.ready)work(()=>ensureTex(def),'Making the texture…');applyFinish({kind:'texture',tex:def.id},true);});grid.appendChild(b);});
   refreshThumbs();
 }
 $('#tabColour').addEventListener('click',()=>applyFinish({kind:'colour'},true));
@@ -1049,9 +1250,10 @@ function setMode(m){S.mode=m;if(m==='tap')$('#editBox').hidden=true;ui();drawOve
 $('#editBtn').addEventListener('click',()=>{if(!selWall())return;const box=$('#editBox');if(box.hidden){box.hidden=false;setMode('add');}else setMode('tap');});
 $('#doneBtn').addEventListener('click',()=>setMode('tap'));
 document.querySelectorAll('.seg button').forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.mode)));
+document.querySelectorAll('.seg3 button').forEach(b=>b.addEventListener('click',()=>applyFinish({sheen:+b.dataset.sheen},true)));
 $('#delBtn').addEventListener('click',removeWall);
 $('#allBtn').addEventListener('click',()=>{const w=selWall();if(!w||S.walls.length<2)return;pushUndo();S.walls.forEach(o=>o.finish=Object.assign({},w.finish));toast('All walls now have the same finish.');ui();requestRender();refreshWallChips();});
-$('#resetCorners').addEventListener('click',()=>{const w=selWall();if(!w)return;pushUndo();w.quadAuto=true;w.quad=autoQuad(w);geom(w);ui();requestRender();});
+$('#resetCorners').addEventListener('click',()=>{const w=selWall();if(!w)return;pushUndo();w.quadAuto=true;w.quad=(w._plane&&depthQuad(w))||autoQuad(w);geom(w);ui();requestRender();});
 $('#tolR').addEventListener('input',()=>{$('#tolOut').textContent=$('#tolR').value;});
 $('#tolR').addEventListener('change',()=>{const v=+$('#tolR').value;S.tol=v;const w=selWall();if(!w)return;pushUndo();w.seeds=w.seeds.map(s=>Object.assign({},s,{tol:v}));work(()=>buildMask(w));});
 $('#brushR').addEventListener('input',()=>{S.brush=+$('#brushR').value;$('#brushOut').textContent=S.brush+' px';});
@@ -1081,8 +1283,8 @@ $('#saveBtn').addEventListener('click',()=>{
 function refreshWallChips(){
   const box=$('#walls');box.innerHTML='';
   S.walls.forEach((w,i)=>{const b=document.createElement('button');b.type='button';b.className='wallchip';b.setAttribute('aria-pressed',String(i===S.sel));
-    const f=w.finish,def=TEXMAP[f.tex],img=f.kind==='texture'&&def?thumb(def,f.color):null;
-    const ic=document.createElement('i');ic.style.setProperty('--c',f.color);if(img)ic.style.backgroundImage='url('+img+')';
+    const f=w.finish,def=TEXMAP[f.tex];
+    const ic=document.createElement('i');ic.style.setProperty('--c',f.color);if(f.kind==='texture'&&def)setTexBg(ic,def,def.scan&&!def.tint&&f.tint?f.color:f.color);
     b.appendChild(ic);b.appendChild(document.createTextNode('Wall '+(i+1)));
     b.title=f.kind==='texture'&&def?def.name+(def.tint||f.tint?' · '+colourName(f.color):''):colourName(f.color);
     b.addEventListener('click',()=>select(i,true));box.appendChild(b);});
@@ -1100,6 +1302,7 @@ function ui(){
   document.querySelectorAll('#strip .dot').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.hex.toLowerCase()===f.color.toLowerCase())));
   document.querySelectorAll('#textures .sw[data-id]').forEach(b=>b.setAttribute('aria-pressed',String(isTex&&b.dataset.id===f.tex)));
   $('#customColor').value=f.color.toLowerCase();
+  document.querySelectorAll('.seg3 button').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.sheen===(f.sheen||0))));
   $('#tintRow').hidden=!def||def.tint;$('#tintChk').checked=!!f.tint;
   $('#sizeR').value=Math.round((f.size||1)*100);$('#sizeOut').textContent=Math.round((f.size||1)*100)+'%';
   $('#depthR').value=Math.round(f.depth*100);$('#depthOut').textContent=Math.round(f.depth*100)+'%';
@@ -1235,6 +1438,7 @@ function renderLive(){
     bindTex(1,LIVE.maskTex);bindTex(2,dummy);bindTex(3,dummy);
     gl.uniform2f(u.uTexel,1/LIVE.pw,1/LIVE.ph);gl.uniformMatrix3fv(u.uInv,false,new Float32Array([1,0,0,0,1,0,0,0,1]));gl.uniform2f(u.uTiles,1,1);
     gl.uniform1f(u.uKind,0);const t=hexLin(S.finish.color);gl.uniform3f(u.uTint,t[0],t[1],t[2]);gl.uniform1f(u.uTintMix,0);gl.uniform1f(u.uAlbMean,1);gl.uniform1f(u.uDepth,0);
+    gl.uniform1i(u.uBlur,4);bindTex(4,dummy);gl.uniform1f(u.uCast,0);gl.uniform3f(u.uWallMean,1,1,1);gl.uniform1f(u.uAlphaTint,0);gl.uniform1f(u.uPacked,0);gl.uniform1f(u.uRough,.9);gl.uniform1f(u.uSheen,S.finish.sheen||0);gl.uniform1f(u.uVary,1);
     gl.uniform3f(u.uLight,0,0,1);gl.uniform1f(u.uMeanLum,Math.max(LIVE.mean,1e-3));gl.uniform1f(u.uHi,0);gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
   }
 }
@@ -1263,6 +1467,7 @@ loadSample();
 buildTextureTiles();
 ui();fit();requestRender();
 aiInit();
+if(location.hash==='#debug')window.WT={S,AI,LIVE}; // for automated tests
 })();
 </script>
 
